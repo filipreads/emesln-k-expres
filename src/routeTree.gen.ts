@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CenikRouteImport } from './routes/cenik'
+import { Route as DispecinkRouteImport } from './routes/dispecink'
+import { Route as ProRemeslnikyRouteImport } from './routes/pro-remeslniky'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CenikRoute = CenikRouteImport.update({
+  id: '/cenik',
+  path: '/cenik',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DispecinkRoute = DispecinkRouteImport.update({
+  id: '/dispecink',
+  path: '/dispecink',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProRemeslnikyRoute = ProRemeslnikyRouteImport.update({
+  id: '/pro-remeslniky',
+  path: '/pro-remeslniky',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/dispecink': typeof DispecinkRoute
+  '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/dispecink': typeof DispecinkRoute
+  '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cenik': typeof CenikRoute
+  '/dispecink': typeof DispecinkRoute
+  '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
+  id: '__root__' | '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CenikRoute: typeof CenikRoute
+  DispecinkRoute: typeof DispecinkRoute
+  ProRemeslnikyRoute: typeof ProRemeslnikyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +78,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cenik': {
+      id: '/cenik'
+      path: '/cenik'
+      fullPath: '/cenik'
+      preLoaderRoute: typeof CenikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dispecink': {
+      id: '/dispecink'
+      path: '/dispecink'
+      fullPath: '/dispecink'
+      preLoaderRoute: typeof DispecinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pro-remeslniky': {
+      id: '/pro-remeslniky'
+      path: '/pro-remeslniky'
+      fullPath: '/pro-remeslniky'
+      preLoaderRoute: typeof ProRemeslnikyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CenikRoute: CenikRoute,
+  DispecinkRoute: DispecinkRoute,
+  ProRemeslnikyRoute: ProRemeslnikyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
