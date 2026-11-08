@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      craftsman_applications: {
+        Row: {
+          area: string
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          trade: string
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          id?: string
+          name: string
+          phone: string
+          trade: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          trade?: string
+        }
+        Relationships: []
+      }
+      service_requests: {
+        Row: {
+          address: string
+          broadcast_count: number
+          created_at: string
+          description: string
+          district: string
+          id: string
+          phone: string
+          photo_path: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          trade: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          address: string
+          broadcast_count?: number
+          created_at?: string
+          description: string
+          district: string
+          id?: string
+          phone: string
+          photo_path?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          trade: string
+          updated_at?: string
+          urgency: string
+        }
+        Update: {
+          address?: string
+          broadcast_count?: number
+          created_at?: string
+          description?: string
+          district?: string
+          id?: string
+          phone?: string
+          photo_path?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          trade?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +94,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      request_status:
+        | "nova"
+        | "oslovovani"
+        | "prijato"
+        | "na_ceste"
+        | "dokonceno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +226,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      request_status: [
+        "nova",
+        "oslovovani",
+        "prijato",
+        "na_ceste",
+        "dokonceno",
+      ],
+    },
   },
 } as const
