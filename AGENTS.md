@@ -28,3 +28,4 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+- Dispatcher dashboard (/dispecink) is gated by a shared PIN in the DISPATCH_PIN secret, checked in server functions; all table access goes through server functions with the admin client (no public RLS policies). Why: MVP with a single concierge operator, no accounts needed.
