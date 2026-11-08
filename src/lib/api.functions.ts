@@ -69,7 +69,7 @@ export const submitApplication = createServerFn({ method: "POST" })
   });
 
 function checkPin(pin: string) {
-  const real = process.env.DISPATCH_PIN;
+  const real = process.env["DISPATCH_PIN"];
   if (!real || pin !== real) throw new Error("Neplatný PIN dispečinku");
 }
 
