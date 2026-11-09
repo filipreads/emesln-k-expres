@@ -8,9 +8,9 @@ import { TRADE_INFO, CALLOUT_FEE, type Trade } from "@/lib/content";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Fofr Mistr – řemeslník u vás do 60–90 minut | Praha" },
-      { name: "description", content: "Havárie vody, elektřiny, zabouchnuté dveře i drobné opravy. Expresní řemeslník v Praze do 60–90 minut, platíte po práci." },
-      { property: "og:title", content: "Fofr Mistr – řemeslník do 60–90 minut" },
+      { title: "Fofr Mistr – expresní řemeslník v Praze" },
+      { name: "description", content: "Havárie vody, elektřiny, zabouchnuté dveře i drobné opravy. Expresní řemeslník v Praze s aktuálním odhadem dojezdu, platíte po práci." },
+      { property: "og:title", content: "Fofr Mistr – expresní řemeslník v Praze" },
       { property: "og:description", content: "Expresní instalatér, elektrikář, zámečník a hodinový manžel po celé Praze." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
