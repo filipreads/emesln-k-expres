@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      availability: {
+        Row: {
+          available_count: number
+          eta_minutes: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          available_count?: number
+          eta_minutes?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          available_count?: number
+          eta_minutes?: number
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       craftsman_applications: {
         Row: {
           area: string

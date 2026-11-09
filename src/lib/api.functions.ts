@@ -113,3 +113,19 @@ export const updateRequest = createServerFn({ method: "POST" })
     if (error) throw new Error("Aktualizace selhala");
     return { ok: true };
   });
+
+export const getAvailability = createServerFn({ method: "GET" }).handler(async () => {
+  const db = await admin();
+  const { data } = await db.from("availability").select("available_count,eta_minutes,updated_at").eq("id", 1).maybeSingle();
+  return data ?? { available_count: 0, eta_minutes: 90, updated_at: new Date(0).toISOString() };
+});
+
+export const setAvailability = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ pin: z.string().max(200), available_count: z.number().int().min(0).max(500), eta_minutes: z.number().int().min(10).max(600) }))
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    const db = await admin();
+    const { error } = await db.from("availability").upsert({ id: 1, available_count: data.available_count, eta_minutes: data.eta_minutes, updated_at: new Date().toISOString() });
+    if (error) throw new Error("Uložení selhalo");
+    return { ok: true };
+  });
