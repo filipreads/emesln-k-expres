@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, RefreshCw, Siren } from "lucide-react";
-import { listDashboard, updateRequest, STATUSES } from "@/lib/api.functions";
+import { listDashboard, updateRequest, getAvailability, setAvailability, STATUSES } from "@/lib/api.functions";
 import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -32,8 +32,10 @@ function Dashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [tab, setTab] = useState<"req" | "crafts">("req");
 
+  const [avail, setAvail] = useState({ count: "0", eta: "90" });
   const load = useCallback(async (p: string) => {
     try {
+      getAvailability().then((a) => setAvail({ count: String(a.available_count), eta: String(a.eta_minutes) }));
       const d = await listDashboard({ data: { pin: p } });
       setData(d);
       sessionStorage.setItem("dpin", p);
@@ -53,6 +55,13 @@ function Dashboard() {
       await updateRequest({ data: { pin, id, ...patch } });
       if (patch.broadcast) toast.success("Broadcast odeslán řemeslníkům v okolí (simulace)");
       load(pin);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
+  }
+
+  async function saveAvail() {
+    try {
+      await setAvailability({ data: { pin, available_count: Number(avail.count) || 0, eta_minutes: Math.max(10, Number(avail.eta) || 90) } });
+      toast.success("Dostupnost uložena – úvodní stránka ji ukazuje");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
   }
 
@@ -82,6 +91,14 @@ function Dashboard() {
             <Button variant="outline" size="icon" onClick={() => load(pin)}><RefreshCw className="h-4 w-4" /></Button>
           </div>
         </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); saveAvail(); }} className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+          <div className="font-bold">Dostupnost na webu</div>
+          <label className="text-sm">Volní mistři<Input type="number" min={0} value={avail.count} onChange={(e) => setAvail({ ...avail, count: e.target.value })} className="w-28" /></label>
+          <label className="text-sm">Odhad dojezdu (min)<Input type="number" min={10} value={avail.eta} onChange={(e) => setAvail({ ...avail, eta: e.target.value })} className="w-28" /></label>
+          <Button type="submit">Uložit</Button>
+          <p className="text-xs text-muted-foreground">Po 12 h bez aktualizace web ukáže „na dotaz“.</p>
+        </form>
 
         {tab === "req" ? (
           <>

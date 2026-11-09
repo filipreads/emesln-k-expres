@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { Clock, Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet } from "lucide-react";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { RequestForm } from "@/components/RequestForm";
+import { getAvailability } from "@/lib/api.functions";
 import { TRADE_INFO, CALLOUT_FEE, type Trade } from "@/lib/content";
 
 export const Route = createFileRoute("/")({
@@ -16,23 +16,25 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  loader: () => getAvailability(),
   component: Index,
 });
 
 const ICONS: Record<Trade, typeof Droplets> = { voda: Droplets, elektro: Zap, zamecnik: KeyRound, manzel: Hammer };
 
-function Countdown() {
-  const [s, setS] = useState(60 * 60);
-  useEffect(() => {
-    const t = setInterval(() => setS((v) => (v > 0 ? v - 1 : 3600)), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const mm = String(Math.floor(s / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return <span className="font-display tabular-nums">{mm}:{ss}</span>;
+const STALE_MS = 12 * 60 * 60 * 1000;
+
+function useAvail() {
+  const a = Route.useLoaderData();
+  const fresh = Date.now() - new Date(a.updated_at).getTime() < STALE_MS;
+  const count = fresh ? a.available_count : 0;
+  return { count, eta: a.eta_minutes, open: count > 0, updated: new Date(a.updated_at) };
 }
 
+function plural(n: number) { return n === 1 ? "mistr volný" : n >= 2 && n <= 4 ? "mistři volní" : "mistrů volných"; }
+
 function Index() {
+  const av = useAvail();
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -40,10 +42,11 @@ function Index() {
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> 14 mistrů právě volných v Praze
+              <span className={av.open ? "h-2 w-2 animate-pulse rounded-full bg-primary" : "h-2 w-2 rounded-full bg-muted-foreground"} />
+              {av.open ? `${av.count} ${plural(av.count)} právě teď v Praze` : "Momentálně ověřujeme volné mistry"}
             </div>
             <h1 className="mt-6 text-4xl font-black leading-[1.05] md:text-6xl">
-              Řemeslník nebo hodinový manžel <span className="text-primary">u vás do 60–90 minut</span>
+              Řemeslník nebo hodinový manžel <span className="text-primary">rychle u vás</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg opacity-80">
               Teče voda, vypadl proud nebo jste se zabouchli? Napište nám a dispečink obratem pošle nejbližšího volného mistra.
@@ -54,11 +57,21 @@ function Index() {
             </div>
           </div>
           <div className="self-center rounded-2xl border border-secondary-foreground/15 bg-secondary-foreground/5 p-8">
-            <div className="flex items-center gap-3 text-sm uppercase tracking-widest opacity-70"><Clock className="h-4 w-4" /> Garance dostupnosti</div>
-            <div className="mt-3 text-7xl font-black text-primary"><Countdown /></div>
-            <p className="mt-3 opacity-80">Objednejte teď a mistr může být u vás do konce odpočtu. Celá Praha 1–22, 7 dní v týdnu.</p>
+            <div className="flex items-center gap-3 text-sm uppercase tracking-widest opacity-70"><Clock className="h-4 w-4" /> Aktuální dostupnost</div>
+            {av.open ? (
+              <>
+                <div className="mt-3 text-6xl font-black text-primary">~{av.eta} min</div>
+                <p className="mt-3 opacity-80">Odhad dojezdu podle aktuálně volných mistrů. Přesný čas vám potvrdí dispečink telefonem.</p>
+              </>
+            ) : (
+              <>
+                <div className="mt-3 text-4xl font-black">Na dotaz</div>
+                <p className="mt-3 opacity-80">Teď nemáme potvrzeného volného mistra. Pošlete poptávku a dispečink vám zavolá s reálným časem.</p>
+              </>
+            )}
+            <p className="mt-2 text-xs opacity-60">Aktualizováno {av.updated.getTime() > 0 ? av.updated.toLocaleString("cs-CZ") : "—"}</p>
             <div className="mt-6 grid grid-cols-3 gap-3 text-center text-sm">
-              <div><div className="text-2xl font-black">~52 min</div><div className="opacity-70">průměrný dojezd</div></div>
+              <div><div className="text-2xl font-black">{av.open ? av.count : 0}</div><div className="opacity-70">volných mistrů</div></div>
               <div><div className="text-2xl font-black">{CALLOUT_FEE} Kč</div><div className="opacity-70">výjezd</div></div>
               <div><div className="text-2xl font-black">0 Kč</div><div className="opacity-70">předem</div></div>
             </div>
@@ -90,7 +103,7 @@ function Index() {
             {[
               [PhoneCall, "Zadáte požadavek", "Vyplníte krátký formulář nebo pošlete fotku závady. Trvá to minutu."],
               [Truck, "Dispečink spojí mistra", "Obratem oslovíme nejbližšího volného řemeslníka a potvrdíme vám čas."],
-              [Wallet, "Do hodiny je u vás", "Mistr závadu opraví. Platíte až po hotové práci, kartou nebo hotově."],
+              [Wallet, "Mistr dorazí", "Mistr závadu opraví. Platíte až po hotové práci, kartou nebo hotově."],
             ].map(([Icon, t, d], i) => {
               const I = Icon as typeof PhoneCall;
               return (
