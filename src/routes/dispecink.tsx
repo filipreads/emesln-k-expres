@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Radio, RefreshCw, Siren } from "lucide-react";
-import { listDashboard, updateRequest, getAvailability, setAvailability, STATUSES } from "@/lib/api.functions";
+import { Radio, RefreshCw, Siren, Sparkles } from "lucide-react";
+import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, STATUSES } from "@/lib/api.functions";
 import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dispecink")({
@@ -58,6 +59,16 @@ function Dashboard() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
   }
 
+  const [issue, setIssue] = useState("");
+  const [ai, setAi] = useState<Awaited<ReturnType<typeof classifyIssue>> | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  async function runAi() {
+    setAiBusy(true); setAi(null);
+    try { setAi(await classifyIssue({ data: { pin, description: issue } })); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
+    finally { setAiBusy(false); }
+  }
+
   async function saveAvail() {
     try {
       await setAvailability({ data: { pin, available_count: Number(avail.count) || 0, eta_minutes: Math.max(10, Number(avail.eta) || 90) } });
@@ -98,6 +109,23 @@ function Dashboard() {
           <label className="text-sm">Odhad dojezdu (min)<Input type="number" min={10} value={avail.eta} onChange={(e) => setAvail({ ...avail, eta: e.target.value })} className="w-28" /></label>
           <Button type="submit">Uložit</Button>
           <p className="text-xs text-muted-foreground">Po 12 h bez aktualizace web ukáže „na dotaz“.</p>
+        </form>
+
+        <form onSubmit={(e) => { e.preventDefault(); runAi(); }} className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 font-bold"><Sparkles className="h-4 w-4 text-primary" /> AI třídění závady</div>
+          <Textarea value={issue} onChange={(e) => setIssue(e.target.value)} rows={2} minLength={5} maxLength={2000} placeholder="Popis od zákazníka, např. teče voda ze stropu od souseda" />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={aiBusy || issue.trim().length < 5}>{aiBusy ? "Analyzuji…" : "Určit obor a naléhavost"}</Button>
+            {ai && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {ai.urgency === "havarie"
+                  ? <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">HAVÁRIE</span>
+                  : <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">DNES</span>}
+                <span className="font-bold">{TRADE_INFO[ai.trade].name}</span>
+                <span className="text-muted-foreground">– {ai.reason}</span>
+              </div>
+            )}
+          </div>
         </form>
 
         {tab === "req" ? (

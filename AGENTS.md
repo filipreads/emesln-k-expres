@@ -29,3 +29,4 @@ use the editor.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
 - Dispatcher dashboard (/dispecink) is gated by a shared PIN in the DISPATCH_PIN secret, checked in server functions; all table access goes through server functions with the admin client (no public RLS policies). Why: MVP with a single concierge operator, no accounts needed.
+- AI classification on /dispecink uses @lovable.dev/ai-gateway in a PIN-checked server function with model openai/gpt-6.1-terra (allowed by workspace retention policy).

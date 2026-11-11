@@ -129,3 +129,42 @@ export const setAvailability = createServerFn({ method: "POST" })
     if (error) throw new Error("Uložení selhalo");
     return { ok: true };
   });
+
+export const classifyIssue = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ pin: z.string().max(200), description: z.string().trim().min(5).max(2000) }))
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    const { generateResponse, GatewayError } = await import("@lovable.dev/ai-gateway");
+    try {
+      const res = await generateResponse({
+        model: "openai/gpt-6.1-terra",
+        instructions:
+          "Jsi dispečer pražské expresní služby řemeslníků. Podle popisu závady urči obor: voda (voda a odpady), elektro, zamecnik (zabouchnuté dveře, zámky), manzel (hodinový manžel, montáž, drobné opravy). Urči naléhavost: havarie = hrozí škoda, nebezpečí nebo zamčený člověk venku, nutné ihned; dnes = drobná oprava. Krátce zdůvodni česky.",
+        input: data.description,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "classification",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["trade", "urgency", "reason"],
+              properties: {
+                trade: { type: "string", enum: [...TRADES] },
+                urgency: { type: "string", enum: ["havarie", "dnes"] },
+                reason: { type: "string" },
+              },
+            },
+          },
+        },
+      });
+      const text = res.output.flatMap((o) => (o.type === "message" ? o.content : [])).map((c) => (c.type === "output_text" ? c.text : "")).join("");
+      return z.object({ trade: z.enum(TRADES), urgency: z.enum(["havarie", "dnes"]), reason: z.string() }).parse(JSON.parse(text));
+    } catch (e) {
+      console.error("classifyIssue", e);
+      if (e instanceof GatewayError && e.httpStatus === 402) throw new Error("Došel kredit AI, doplňte ho v nastavení.");
+      if (e instanceof GatewayError && e.httpStatus === 429) throw new Error("AI je přetížená, zkuste to za chvíli.");
+      throw new Error("AI analýza selhala, zkuste to znovu.");
+    }
+  });
