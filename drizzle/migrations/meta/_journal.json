@@ -15,6 +15,13 @@
       "when": 1794257056488,
       "tag": "0001_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794484667128,
+      "tag": "0002_nationwide_order_workflow",
+      "breakpoints": true
     }
   ]
 }

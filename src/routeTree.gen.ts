@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CenikRouteImport } from './routes/cenik'
 import { Route as DispecinkRouteImport } from './routes/dispecink'
+import { Route as MistrRouteImport } from './routes/mistr'
+import { Route as ObjednavkaRouteImport } from './routes/objednavka'
 import { Route as ProRemeslnikyRouteImport } from './routes/pro-remeslniky'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +31,16 @@ const DispecinkRoute = DispecinkRouteImport.update({
   path: '/dispecink',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MistrRoute = MistrRouteImport.update({
+  id: '/mistr',
+  path: '/mistr',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjednavkaRoute = ObjednavkaRouteImport.update({
+  id: '/objednavka',
+  path: '/objednavka',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProRemeslnikyRoute = ProRemeslnikyRouteImport.update({
   id: '/pro-remeslniky',
   path: '/pro-remeslniky',
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
+  '/mistr': typeof MistrRoute
+  '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
+  '/mistr': typeof MistrRoute
+  '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
+  '/mistr': typeof MistrRoute
+  '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
+  fullPaths:
+    '/' | '/cenik' | '/dispecink' | '/mistr' | '/objednavka' | '/pro-remeslniky'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
-  id: '__root__' | '/' | '/cenik' | '/dispecink' | '/pro-remeslniky'
+  to:
+    '/' | '/cenik' | '/dispecink' | '/mistr' | '/objednavka' | '/pro-remeslniky'
+  id:
+    | '__root__'
+    | '/'
+    | '/cenik'
+    | '/dispecink'
+    | '/mistr'
+    | '/objednavka'
+    | '/pro-remeslniky'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CenikRoute: typeof CenikRoute
   DispecinkRoute: typeof DispecinkRoute
+  MistrRoute: typeof MistrRoute
+  ObjednavkaRoute: typeof ObjednavkaRoute
   ProRemeslnikyRoute: typeof ProRemeslnikyRoute
 }
 
@@ -92,6 +121,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DispecinkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mistr': {
+      id: '/mistr'
+      path: '/mistr'
+      fullPath: '/mistr'
+      preLoaderRoute: typeof MistrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objednavka': {
+      id: '/objednavka'
+      path: '/objednavka'
+      fullPath: '/objednavka'
+      preLoaderRoute: typeof ObjednavkaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pro-remeslniky': {
       id: '/pro-remeslniky'
       path: '/pro-remeslniky'
@@ -106,6 +149,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CenikRoute: CenikRoute,
   DispecinkRoute: DispecinkRoute,
+  MistrRoute: MistrRoute,
+  ObjednavkaRoute: ObjednavkaRoute,
   ProRemeslnikyRoute: ProRemeslnikyRoute,
 }
 export const routeTree = rootRouteImport

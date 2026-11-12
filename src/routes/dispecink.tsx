@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, RefreshCw, Siren, Sparkles } from "lucide-react";
@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { setCraftsman } from "@/lib/workflow.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dispecink")({
@@ -53,8 +54,9 @@ function Dashboard() {
 
   async function act(id: string, patch: { status?: Status; broadcast?: boolean }) {
     try {
-      await updateRequest({ data: { pin, id, ...patch } });
-      if (patch.broadcast) toast.success("Broadcast odeslán řemeslníkům v okolí (simulace)");
+      const result = await updateRequest({ data: { pin, id, ...patch } });
+      if (patch.broadcast && "count" in result && result.count === 0) toast.info("Žádný vhodný volný řemeslník v kraji.");
+      if (patch.broadcast) toast.success("Nabídky vytvořeny pro dostupné ověřené řemeslníky v kraji.");
       load(pin);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
   }
@@ -62,9 +64,10 @@ function Dashboard() {
   const [issue, setIssue] = useState("");
   const [ai, setAi] = useState<Awaited<ReturnType<typeof classifyIssue>> | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  const [issuePhoto, setIssuePhoto] = useState<File | null>(null);
   async function runAi() {
     setAiBusy(true); setAi(null);
-    try { setAi(await classifyIssue({ data: { pin, description: issue } })); }
+    try { const form = new FormData(); form.set("pin", pin); form.set("description", issue); if (issuePhoto) form.set("photo", issuePhoto); setAi(await classifyIssue({ data: form })); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
     finally { setAiBusy(false); }
   }
@@ -104,7 +107,7 @@ function Dashboard() {
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); saveAvail(); }} className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-          <div className="font-bold">Dostupnost na webu</div>
+          <div className="font-bold">Dostupnost sítě v ČR</div>
           <label className="text-sm">Volní mistři<Input type="number" min={0} value={avail.count} onChange={(e) => setAvail({ ...avail, count: e.target.value })} className="w-28" /></label>
           <label className="text-sm">Odhad dojezdu (min)<Input type="number" min={10} value={avail.eta} onChange={(e) => setAvail({ ...avail, eta: e.target.value })} className="w-28" /></label>
           <Button type="submit">Uložit</Button>
@@ -114,6 +117,7 @@ function Dashboard() {
         <form onSubmit={(e) => { e.preventDefault(); runAi(); }} className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 font-bold"><Sparkles className="h-4 w-4 text-primary" /> AI třídění závady</div>
           <Textarea value={issue} onChange={(e) => setIssue(e.target.value)} rows={2} minLength={5} maxLength={2000} placeholder="Popis od zákazníka, např. teče voda ze stropu od souseda" />
+          <label className="block text-sm">Fotografie závady (JPG, PNG, WebP do 10 MB)<Input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setIssuePhoto(e.target.files?.[0] ?? null)} className="mt-1" /></label>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={aiBusy || issue.trim().length < 5}>{aiBusy ? "Analyzuji…" : "Určit obor a naléhavost"}</Button>
             {ai && (
@@ -128,6 +132,7 @@ function Dashboard() {
           </div>
         </form>
 
+        <p className="mt-4 text-sm text-muted-foreground">Nabídky jsou v soukromém přehledu řemeslníka. Automatické SMS nejsou připojené.</p>
         {tab === "req" ? (
           <>
             <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -153,14 +158,17 @@ function Dashboard() {
                           <span className="font-bold">{TRADE_INFO[r.trade as Trade]?.name ?? r.trade}</span>
                           <span className="text-sm text-muted-foreground">· {new Date(r.created_at).toLocaleString("cs-CZ")}</span>
                         </div>
-                        <div className="mt-1 font-semibold">{r.address}, {r.district}</div>
+                        <div className="mt-1 font-semibold">{r.address}, {r.city ?? r.district} · {r.region ?? "Kraj neuveden"}</div>
                         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{r.description}</p>
+                        {r.ai_reason && <p className="mt-2 text-sm"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />{r.ai_reason}</p>}
+                        {r.automation_note && <p className="mt-2 text-sm font-semibold text-destructive">{r.automation_note}</p>}
+                        <Link to="/objednavka" search={{ token: r.tracking_token }} className="mt-2 block text-sm text-primary">Sledování pro zákazníka</Link>
                         <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary">{r.phone}</a>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => act(r.id, { broadcast: true })} disabled={r.status === "dokonceno"}>
-                        <Radio className="mr-1 h-4 w-4" /> Broadcast {r.broadcast_count > 0 && `(${r.broadcast_count}×)`}
+                      <Button size="sm" variant="outline" onClick={() => act(r.id, { broadcast: true })} disabled={r.status !== "nova" && r.status !== "oslovovani"}>
+                        <Radio className="mr-1 h-4 w-4" /> Vytvořit nabídky
                       </Button>
                     </div>
                   </div>
@@ -168,11 +176,11 @@ function Dashboard() {
                     {STATUSES.map((s, i) => {
                       const cur = STATUSES.indexOf(r.status as Status);
                       return (
-                        <button key={s} onClick={() => act(r.id, { status: s })}
+                        <Button variant="ghost" size="sm" key={s} onClick={() => act(r.id, { status: s })}
                           className={cn("rounded-full px-3 py-1 text-xs font-semibold transition",
                             i < cur ? "bg-primary/20 text-foreground" : i === cur ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent")}>
                           {STATUS_LABEL[s]}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -185,8 +193,13 @@ function Dashboard() {
             {data.craftsmen.length === 0 && <p className="p-5 text-muted-foreground">Zatím žádné přihlášky.</p>}
             {data.craftsmen.map((c) => (
               <div key={c.id} className="flex flex-wrap justify-between gap-2 p-4">
-                <div><div className="font-bold">{c.name}</div><div className="text-sm text-muted-foreground">{TRADE_INFO[c.trade as Trade]?.name} · {c.area}</div></div>
-                <a href={`tel:${c.phone}`} className="font-semibold text-primary">{c.phone}</a>
+                <div><div className="font-bold">{c.name}</div><div className="text-sm text-muted-foreground">{TRADE_INFO[c.trade as Trade]?.name} · {c.area} · {c.region ?? "Kraj neuveden"}</div></div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a href={`tel:${c.phone}`} className="font-semibold text-primary">{c.phone}</a>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: e.target.checked, available: c.available } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Ověřený</label>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.available} disabled={!c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: c.approved, available: e.target.checked } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Volný</label>
+                  {c.approved && <Link to="/mistr" search={{ token: c.portal_token }} className="text-sm font-semibold text-primary">Soukromý přehled</Link>}
+                </div>
               </div>
             ))}
           </div>

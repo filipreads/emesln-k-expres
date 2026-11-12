@@ -5,7 +5,7 @@ import { TRADE_INFO, CALLOUT_FEE, type Trade } from "@/lib/content";
 export const Route = createFileRoute("/cenik")({
   head: () => ({
     meta: [
-      { title: "Ceník – Fofr Mistr Praha" },
+      { title: "Ceník – Fofr Mistr ČR" },
       { name: "description", content: "Pevný výjezdní poplatek a transparentní hodinové sazby pro instalatéra, elektrikáře, zámečníka a hodinového manžela." },
       { property: "og:title", content: "Ceník – Fofr Mistr" },
       { property: "og:description", content: "Pevný výjezd a jasné hodinové sazby bez skrytých poplatků." },
@@ -26,7 +26,7 @@ function Pricing() {
         <div className="mt-10 rounded-2xl bg-secondary p-8 text-secondary-foreground">
           <div className="text-sm uppercase tracking-widest opacity-70">Startovní výjezdní poplatek</div>
           <div className="mt-2 text-5xl font-black text-primary">{CALLOUT_FEE} Kč</div>
-          <p className="mt-2 opacity-80">Doprava kamkoliv v Praze + diagnostika závady. Zahrnuje prvních 15 minut práce.</p>
+          <p className="mt-2 opacity-80">Výjezd a diagnostika závady. Dostupnost a případné náklady delší dopravy vám potvrdíme před objednáním. Zahrnuje prvních 15 minut práce.</p>
         </div>
         <div className="mt-8 divide-y divide-border rounded-2xl border border-border bg-card">
           {(Object.keys(TRADE_INFO) as Trade[]).map((t) => (

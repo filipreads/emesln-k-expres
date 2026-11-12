@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { REGIONS } from "./regions";
 
 export const TRADES = ["voda", "elektro", "zamecnik", "manzel"] as const;
 export const STATUSES = ["nova", "oslovovani", "prijato", "na_ceste", "dokonceno"] as const;
@@ -13,7 +14,8 @@ const requestSchema = z.object({
   urgency: z.enum(["havarie", "dnes"]),
   trade: z.enum(TRADES),
   address: z.string().trim().min(3).max(200),
-  district: z.string().trim().min(2).max(60),
+  district: z.string().trim().min(2).max(100),
+  region: z.enum(REGIONS),
   description: z.string().trim().min(5).max(2000),
   phone,
 });
@@ -30,14 +32,14 @@ export const submitRequest = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const parsed = requestSchema.parse(Object.fromEntries(
-      ["urgency", "trade", "address", "district", "description", "phone"].map((k) => [k, data.get(k)]),
+      ["urgency", "trade", "address", "district", "region", "description", "phone"].map((k) => [k, data.get(k)]),
     ));
     const db = await admin();
     let photo_path: string | null = null;
     const file = data.get("photo");
     if (file instanceof File && file.size > 0) {
-      if (file.size > 10 * 1024 * 1024 || !file.type.startsWith("image/"))
-        throw new Error("Fotka musí být obrázek do 10 MB");
+      if (file.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))
+        throw new Error("Fotka musí být JPG, PNG nebo WebP do 10 MB");
       const ext = (file.name.split(".").pop() || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 5);
       photo_path = `${crypto.randomUUID()}.${ext}`;
       const { error } = await db.storage.from("request-photos").upload(photo_path, file, { contentType: file.type });
@@ -45,11 +47,26 @@ export const submitRequest = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await db
       .from("service_requests")
-      .insert({ ...parsed, photo_path })
-      .select("id")
+      .insert({ ...parsed, city: parsed.district, photo_path })
+      .select("id,tracking_token")
       .single();
     if (error) throw new Error("Uložení selhalo");
-    return { id: row.id };
+    try {
+      const { analyze, createOffers } = await import("./workflow.server");
+      let image: string | undefined;
+      if (photo_path) {
+        const { data: signed, error: se } = await db.storage.from("request-photos").createSignedUrl(photo_path, 120);
+        if (se || !signed) throw new Error("Fotografii se nepodařilo připravit k rozboru.");
+        image = signed.signedUrl;
+      }
+      const ai = await analyze(parsed.description, image);
+      const { error: ae } = await db.from("service_requests").update({ trade: ai.trade, urgency: parsed.urgency === "havarie" ? "havarie" : ai.urgency, ai_reason: ai.reason, automation_note: ai.review ? "AI doporučuje kontrolu dispečerem. " + ai.reason : null }).eq("id", row.id);
+      if (ae) throw new Error("Uložení rozboru selhalo");
+      if (!ai.review) await createOffers(row.id);
+    } catch (e) {
+      await db.from("service_requests").update({ automation_note: e instanceof Error ? e.message : "Automatizace vyžaduje kontrolu dispečerem." }).eq("id", row.id);
+    }
+    return { id: row.id, token: row.tracking_token };
   });
 
 export const submitApplication = createServerFn({ method: "POST" })
@@ -58,6 +75,7 @@ export const submitApplication = createServerFn({ method: "POST" })
       name: z.string().trim().min(2).max(100),
       trade: z.enum(TRADES),
       area: z.string().trim().min(2).max(200),
+      region: z.enum(REGIONS),
       phone,
     }),
   )
@@ -78,18 +96,21 @@ export const listDashboard = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     checkPin(data.pin);
     const db = await admin();
-    const [{ data: requests }, { data: crafts }] = await Promise.all([
+    const [requestsResult, craftsResult] = await Promise.all([
       db.from("service_requests").select("*").order("created_at", { ascending: false }).limit(200),
       db.from("craftsman_applications").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
-    const withPhotos = await Promise.all(
-      (requests ?? []).map(async (r) => {
+    if (requestsResult.error || craftsResult.error) throw new Error("Načtení nástěnky selhalo");
+    const withPhotos = [];
+    for (const r of requestsResult.data ?? []) {
+      const result = await (async () => {
         if (!r.photo_path) return { ...r, photo_url: null as string | null };
         const { data: s } = await db.storage.from("request-photos").createSignedUrl(r.photo_path, 3600);
         return { ...r, photo_url: s?.signedUrl ?? null };
-      }),
-    );
-    return { requests: withPhotos, craftsmen: crafts ?? [] };
+      })();
+      withPhotos.push(result);
+    }
+    return { requests: withPhotos, craftsmen: craftsResult.data ?? [] };
   });
 
 export const updateRequest = createServerFn({ method: "POST" })
@@ -106,8 +127,9 @@ export const updateRequest = createServerFn({ method: "POST" })
     };
     if (data.status) patch.status = data.status;
     if (data.broadcast) {
-      patch.broadcast_count = cur.broadcast_count + 1;
-      if (cur.status === "nova") patch.status = "oslovovani";
+      const { createOffers } = await import("./workflow.server");
+      const result = await createOffers(data.id);
+      return result;
     }
     const { error } = await db.from("service_requests").update(patch).eq("id", data.id);
     if (error) throw new Error("Aktualizace selhala");
@@ -131,40 +153,19 @@ export const setAvailability = createServerFn({ method: "POST" })
   });
 
 export const classifyIssue = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ pin: z.string().max(200), description: z.string().trim().min(5).max(2000) }))
+  .inputValidator((d: unknown) => {
+    if (!(d instanceof FormData)) throw new Error("Neplatná data");
+    const parsed = z.object({ pin: z.string().max(200), description: z.string().trim().min(5).max(2000) }).parse({ pin: d.get("pin"), description: d.get("description") });
+    return { ...parsed, photo: d.get("photo") };
+  })
   .handler(async ({ data }) => {
     checkPin(data.pin);
-    const { generateResponse, GatewayError } = await import("@lovable.dev/ai-gateway");
-    try {
-      const res = await generateResponse({
-        model: "openai/gpt-6.1-terra",
-        instructions:
-          "Jsi dispečer pražské expresní služby řemeslníků. Podle popisu závady urči obor: voda (voda a odpady), elektro, zamecnik (zabouchnuté dveře, zámky), manzel (hodinový manžel, montáž, drobné opravy). Urči naléhavost: havarie = hrozí škoda, nebezpečí nebo zamčený člověk venku, nutné ihned; dnes = drobná oprava. Krátce zdůvodni česky.",
-        input: data.description,
-        text: {
-          format: {
-            type: "json_schema",
-            name: "classification",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              required: ["trade", "urgency", "reason"],
-              properties: {
-                trade: { type: "string", enum: [...TRADES] },
-                urgency: { type: "string", enum: ["havarie", "dnes"] },
-                reason: { type: "string" },
-              },
-            },
-          },
-        },
-      });
-      const text = res.output.flatMap((o) => (o.type === "message" ? o.content : [])).map((c) => (c.type === "output_text" ? c.text : "")).join("");
-      return z.object({ trade: z.enum(TRADES), urgency: z.enum(["havarie", "dnes"]), reason: z.string() }).parse(JSON.parse(text));
-    } catch (e) {
-      console.error("classifyIssue", e);
-      if (e instanceof GatewayError && e.httpStatus === 402) throw new Error("Došel kredit AI, doplňte ho v nastavení.");
-      if (e instanceof GatewayError && e.httpStatus === 429) throw new Error("AI je přetížená, zkuste to za chvíli.");
-      throw new Error("AI analýza selhala, zkuste to znovu.");
+    let image: string | undefined;
+    if (data.photo instanceof File && data.photo.size > 0) {
+      if (data.photo.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(data.photo.type)) throw new Error("Fotka musí být JPG, PNG nebo WebP do 10 MB");
+      const { Buffer } = await import("node:buffer");
+      image = `data:${data.photo.type};base64,${Buffer.from(await data.photo.arrayBuffer()).toString("base64")}`;
     }
+    const { analyze } = await import("./workflow.server");
+    return analyze(data.description, image);
   });

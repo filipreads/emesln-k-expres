@@ -24,7 +24,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-secondary text-secondary-foreground">
       <div className="mx-auto max-w-6xl px-4 py-10 text-sm opacity-80">
-        © {new Date().getFullYear()} Fofr Mistr · Expresní řemeslníci po celé Praze · Platíte až po hotové práci
+        © {new Date().getFullYear()} Fofr Mistr · Expresní řemeslníci po celé ČR · Platíte až po hotové práci
       </div>
     </footer>
   );

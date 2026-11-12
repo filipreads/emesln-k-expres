@@ -37,70 +37,142 @@ export type Database = {
       }
       craftsman_applications: {
         Row: {
+          approved: boolean
           area: string
+          available: boolean
           created_at: string
           id: string
           name: string
           phone: string
+          portal_token: string
+          region: string | null
           trade: string
         }
         Insert: {
+          approved?: boolean
           area: string
+          available?: boolean
           created_at?: string
           id?: string
           name: string
           phone: string
+          portal_token?: string
+          region?: string | null
           trade: string
         }
         Update: {
+          approved?: boolean
           area?: string
+          available?: boolean
           created_at?: string
           id?: string
           name?: string
           phone?: string
+          portal_token?: string
+          region?: string | null
           trade?: string
         }
         Relationships: []
       }
+      job_offers: {
+        Row: {
+          craftsman_id: string
+          created_at: string
+          id: string
+          request_id: string
+          state: string
+        }
+        Insert: {
+          craftsman_id: string
+          created_at?: string
+          id?: string
+          request_id: string
+          state?: string
+        }
+        Update: {
+          craftsman_id?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offers_craftsman_id_fkey"
+            columns: ["craftsman_id"]
+            isOneToOne: false
+            referencedRelation: "craftsman_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_offers_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           address: string
+          ai_reason: string | null
+          arrival_minutes: number | null
+          assigned_craftsman_id: string | null
+          automation_note: string | null
           broadcast_count: number
+          city: string | null
           created_at: string
           description: string
           district: string
           id: string
           phone: string
           photo_path: string | null
+          region: string | null
           status: Database["public"]["Enums"]["request_status"]
+          tracking_token: string
           trade: string
           updated_at: string
           urgency: string
         }
         Insert: {
           address: string
+          ai_reason?: string | null
+          arrival_minutes?: number | null
+          assigned_craftsman_id?: string | null
+          automation_note?: string | null
           broadcast_count?: number
+          city?: string | null
           created_at?: string
           description: string
           district: string
           id?: string
           phone: string
           photo_path?: string | null
+          region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
+          tracking_token?: string
           trade: string
           updated_at?: string
           urgency: string
         }
         Update: {
           address?: string
+          ai_reason?: string | null
+          arrival_minutes?: number | null
+          assigned_craftsman_id?: string | null
+          automation_note?: string | null
           broadcast_count?: number
+          city?: string | null
           created_at?: string
           description?: string
           district?: string
           id?: string
           phone?: string
           photo_path?: string | null
+          region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
+          tracking_token?: string
           trade?: string
           updated_at?: string
           urgency?: string
@@ -112,7 +184,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_job_offer: {
+        Args: { p_minutes: number; p_offer: string; p_token: string }
+        Returns: string
+      }
     }
     Enums: {
       request_status:

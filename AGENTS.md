@@ -30,3 +30,6 @@ use the editor.
 <!-- LOVABLE:END -->
 - Dispatcher dashboard (/dispecink) is gated by a shared PIN in the DISPATCH_PIN secret, checked in server functions; all table access goes through server functions with the admin client (no public RLS policies). Why: MVP with a single concierge operator, no accounts needed.
 - AI classification on /dispecink uses @lovable.dev/ai-gateway in a PIN-checked server function with model openai/gpt-6.1-terra (allowed by workspace retention policy).
+- Submitted orders run one awaited AI classification through the shared server-only workflow; failure or uncertainty requires dispatcher review instead of replaying inference. Why: avoid duplicate AI billing and unsafe dispatch.
+- Offer creation matches approved, available craftspeople by region and trade; acceptance uses a service-role-only database function with row locks. Why: prevent two craftspeople from accepting the same order.
+- Customer and craftsman pages use unguessable capability tokens, validated server-side with narrow data projections; never expose tokens through public lists. Why: retain the account-free concierge model without exposing customer details.

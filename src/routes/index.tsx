@@ -8,10 +8,10 @@ import { TRADE_INFO, CALLOUT_FEE, type Trade } from "@/lib/content";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Fofr Mistr – expresní řemeslník v Praze" },
-      { name: "description", content: "Havárie vody, elektřiny, zabouchnuté dveře i drobné opravy. Expresní řemeslník v Praze s aktuálním odhadem dojezdu, platíte po práci." },
-      { property: "og:title", content: "Fofr Mistr – expresní řemeslník v Praze" },
-      { property: "og:description", content: "Expresní instalatér, elektrikář, zámečník a hodinový manžel po celé Praze." },
+      { title: "Fofr Mistr – expresní řemeslník v celé ČR" },
+      { name: "description", content: "Havárie vody, elektřiny, zabouchnuté dveře i drobné opravy. Expresní řemeslník v celé ČR s aktuálním odhadem dojezdu, platíte po práci." },
+      { property: "og:title", content: "Fofr Mistr – expresní řemeslník v celé ČR" },
+      { property: "og:description", content: "Expresní instalatér, elektrikář, zámečník a hodinový manžel po celé České republice." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -43,13 +43,13 @@ function Index() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary">
               <span className={av.open ? "h-2 w-2 animate-pulse rounded-full bg-primary" : "h-2 w-2 rounded-full bg-muted-foreground"} />
-              {av.open ? `${av.count} ${plural(av.count)} právě teď v Praze` : "Momentálně ověřujeme volné mistry"}
+              {av.open ? `${av.count} ${plural(av.count)} v síti právě teď` : "Momentálně ověřujeme volné mistry"}
             </div>
             <h1 className="mt-6 text-4xl font-black leading-[1.05] md:text-6xl">
               Řemeslník nebo hodinový manžel <span className="text-primary">rychle u vás</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg opacity-80">
-              Teče voda, vypadl proud nebo jste se zabouchli? Napište nám a dispečink obratem pošle nejbližšího volného mistra.
+              Teče voda, vypadl proud nebo jste se zabouchli? Napište nám a najdeme vhodného dostupného mistra ve vašem kraji.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <a href="#objednat" className="rounded-md bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary/90">Objednat mistra</a>
@@ -57,11 +57,11 @@ function Index() {
             </div>
           </div>
           <div className="self-center rounded-2xl border border-secondary-foreground/15 bg-secondary-foreground/5 p-8">
-            <div className="flex items-center gap-3 text-sm uppercase tracking-widest opacity-70"><Clock className="h-4 w-4" /> Aktuální dostupnost</div>
+            <div className="flex items-center gap-3 text-sm uppercase tracking-widest opacity-70"><Clock className="h-4 w-4" /> Dostupnost sítě v ČR</div>
             {av.open ? (
               <>
-                <div className="mt-3 text-6xl font-black text-primary">~{av.eta} min</div>
-                <p className="mt-3 opacity-80">Odhad dojezdu podle aktuálně volných mistrů. Přesný čas vám potvrdí dispečink telefonem.</p>
+                <div className="mt-3 text-4xl font-black text-primary">Dle vaší lokality</div>
+                <p className="mt-3 opacity-80">Počet volných mistrů je za celou síť, nikoli pro vaši obec. Čas příjezdu potvrdí řemeslník při přijetí zakázky.</p>
               </>
             ) : (
               <>
@@ -124,7 +124,7 @@ function Index() {
           <h2 className="text-3xl font-black md:text-4xl">Expresní objednávka</h2>
           <p className="mt-4 text-muted-foreground">Čím víc nám řeknete, tím rychleji pošleme správného mistra se správným nářadím.</p>
           <ul className="mt-6 space-y-3 text-sm">
-            {["Potvrzení telefonem do 5 minut", `Pevný výjezd ${CALLOUT_FEE} Kč včetně diagnostiky`, "Ověření a pojištění řemeslníci"].map((x) => (
+            {["Dojezd potvrzený po přijetí zakázky", `Pevný výjezd ${CALLOUT_FEE} Kč včetně diagnostiky`, "Ověření a pojištění řemeslníci"].map((x) => (
               <li key={x} className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success" /> {x}</li>
             ))}
           </ul>

@@ -7,15 +7,16 @@ import { submitApplication } from "@/lib/api.functions";
 import { TRADE_INFO, type Trade } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { REGIONS } from "@/lib/regions";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/pro-remeslniky")({
   head: () => ({
     meta: [
       { title: "Přidejte se do sítě – Fofr Mistr pro řemeslníky" },
-      { name: "description", content: "Jste instalatér, elektrikář, zámečník nebo hodinový manžel v Praze? Získejte zakázky bez shánění." },
+      { name: "description", content: "Jste instalatér, elektrikář, zámečník nebo hodinový manžel v celé ČR? Získejte zakázky bez shánění." },
       { property: "og:title", content: "Přidejte se do sítě Fofr Mistr" },
-      { property: "og:description", content: "Zakázky v Praze přímo do telefonu." },
+      { property: "og:description", content: "Zakázky v celé ČR přímo do telefonu." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -33,7 +34,7 @@ function Join() {
     const f = new FormData(e.currentTarget);
     setBusy(true);
     try {
-      await submitApplication({ data: { name: String(f.get("name")), area: String(f.get("area")), phone: String(f.get("phone")), trade } });
+      await submitApplication({ data: { name: String(f.get("name")), area: String(f.get("area")), phone: String(f.get("phone")), region: String(f.get("region")) as (typeof REGIONS)[number], trade } });
       setDone(true);
     } catch {
       toast.error("Zkontrolujte prosím údaje (telefon ve formátu +420 777 123 456).");
@@ -68,7 +69,8 @@ function Join() {
                 {(Object.keys(TRADE_INFO) as Trade[]).map((t) => <option key={t} value={t}>{TRADE_INFO[t].name}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="area">Lokalita působení</Label><Input id="area" name="area" required maxLength={200} placeholder="Např. Praha 4, 5, 10" className="mt-1" /></div>
+            <div><Label htmlFor="region">Kraj</Label><select id="region" name="region" required className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm">{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
+            <div><Label htmlFor="area">Lokalita působení</Label><Input id="area" name="area" required maxLength={200} placeholder="Např. Brno a okolí do 30 km" className="mt-1" /></div>
             <div><Label htmlFor="phone">Telefon</Label><Input id="phone" name="phone" type="tel" required placeholder="+420 777 123 456" className="mt-1" /></div>
             <Button type="submit" size="lg" disabled={busy} className="w-full font-bold">{busy ? "Odesílám…" : "Odeslat přihlášku"}</Button>
           </form>
