@@ -47,6 +47,7 @@ export type Database = {
           portal_token: string
           region: string | null
           trade: string
+          user_id: string | null
         }
         Insert: {
           approved?: boolean
@@ -59,6 +60,7 @@ export type Database = {
           portal_token?: string
           region?: string | null
           trade: string
+          user_id?: string | null
         }
         Update: {
           approved?: boolean
@@ -71,6 +73,7 @@ export type Database = {
           portal_token?: string
           region?: string | null
           trade?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -113,6 +116,24 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
           address: string
@@ -123,11 +144,13 @@ export type Database = {
           broadcast_count: number
           city: string | null
           created_at: string
+          customer_user_id: string | null
           description: string
           district: string
           id: string
           phone: string
           photo_path: string | null
+          postal_code: string | null
           region: string | null
           status: Database["public"]["Enums"]["request_status"]
           tracking_token: string
@@ -144,11 +167,13 @@ export type Database = {
           broadcast_count?: number
           city?: string | null
           created_at?: string
+          customer_user_id?: string | null
           description: string
           district: string
           id?: string
           phone: string
           photo_path?: string | null
+          postal_code?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           tracking_token?: string
@@ -165,11 +190,13 @@ export type Database = {
           broadcast_count?: number
           city?: string | null
           created_at?: string
+          customer_user_id?: string | null
           description?: string
           district?: string
           id?: string
           phone?: string
           photo_path?: string | null
+          postal_code?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           tracking_token?: string

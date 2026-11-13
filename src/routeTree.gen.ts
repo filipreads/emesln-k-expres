@@ -10,15 +10,27 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CenikRouteImport } from './routes/cenik'
 import { Route as DispecinkRouteImport } from './routes/dispecink'
 import { Route as MistrRouteImport } from './routes/mistr'
 import { Route as ObjednavkaRouteImport } from './routes/objednavka'
 import { Route as ProRemeslnikyRouteImport } from './routes/pro-remeslniky'
+import { Route as AuthenticatedUcetRouteImport } from './routes/_authenticated/ucet'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CenikRoute = CenikRouteImport.update({
@@ -46,51 +58,82 @@ const ProRemeslnikyRoute = ProRemeslnikyRouteImport.update({
   path: '/pro-remeslniky',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedUcetRoute = AuthenticatedUcetRouteImport.update({
+  id: '/ucet',
+  path: '/ucet',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
   '/mistr': typeof MistrRoute
   '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
+  '/ucet': typeof AuthenticatedUcetRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
   '/mistr': typeof MistrRoute
   '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
+  '/ucet': typeof AuthenticatedUcetRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/cenik': typeof CenikRoute
   '/dispecink': typeof DispecinkRoute
   '/mistr': typeof MistrRoute
   '/objednavka': typeof ObjednavkaRoute
   '/pro-remeslniky': typeof ProRemeslnikyRoute
+  '/_authenticated/ucet': typeof AuthenticatedUcetRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/cenik' | '/dispecink' | '/mistr' | '/objednavka' | '/pro-remeslniky'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    '/' | '/cenik' | '/dispecink' | '/mistr' | '/objednavka' | '/pro-remeslniky'
-  id:
-    | '__root__'
     | '/'
+    | '/auth'
     | '/cenik'
     | '/dispecink'
     | '/mistr'
     | '/objednavka'
     | '/pro-remeslniky'
+    | '/ucet'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/auth'
+    | '/cenik'
+    | '/dispecink'
+    | '/mistr'
+    | '/objednavka'
+    | '/pro-remeslniky'
+    | '/ucet'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/cenik'
+    | '/dispecink'
+    | '/mistr'
+    | '/objednavka'
+    | '/pro-remeslniky'
+    | '/_authenticated/ucet'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CenikRoute: typeof CenikRoute
   DispecinkRoute: typeof DispecinkRoute
   MistrRoute: typeof MistrRoute
@@ -105,6 +148,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cenik': {
@@ -142,11 +199,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProRemeslnikyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/ucet': {
+      id: '/_authenticated/ucet'
+      path: '/ucet'
+      fullPath: '/ucet'
+      preLoaderRoute: typeof AuthenticatedUcetRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedUcetRoute: typeof AuthenticatedUcetRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedUcetRoute: AuthenticatedUcetRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   CenikRoute: CenikRoute,
   DispecinkRoute: DispecinkRoute,
   MistrRoute: MistrRoute,

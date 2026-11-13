@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-import { REGIONS } from "@/lib/regions";
+import { AddressFields } from "@/components/AddressFields";
 import { Link } from "@tanstack/react-router";
 
 export function RequestForm() {
@@ -70,17 +70,7 @@ export function RequestForm() {
           ))}
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-2">
-          <Label htmlFor="address">Adresa</Label>
-          <Input id="address" name="address" required maxLength={200} placeholder="Ulice a číslo popisné" className="mt-1" />
-        </div>
-        <div>
-          <Label htmlFor="district">Město / obec</Label>
-          <Input id="district" name="district" required minLength={2} maxLength={100} placeholder="Např. Brno" className="mt-1" />
-        </div>
-      </div>
-      <div><Label htmlFor="region">Kraj</Label><select id="region" name="region" required className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm">{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
+      <AddressFields />
       <div>
         <Label htmlFor="description">Popis závady</Label>
         <Textarea id="description" name="description" required minLength={5} maxLength={2000} rows={3} placeholder="Např. teče voda pod dřezem, nejde zavřít ventil" className="mt-1" />

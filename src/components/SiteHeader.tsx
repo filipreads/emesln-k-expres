@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { Zap } from "lucide-react";
+import { UserRound, Zap } from "lucide-react";
+import { useSessionUser } from "@/hooks/use-session";
 
 export function SiteHeader() {
+  const user = useSessionUser();
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -13,6 +15,7 @@ export function SiteHeader() {
           <Link to="/cenik" className="hidden sm:inline hover:text-primary" activeProps={{ className: "text-primary" }}>Ceník</Link>
           <Link to="/pro-remeslniky" className="hidden sm:inline hover:text-primary" activeProps={{ className: "text-primary" }}>Pro řemeslníky</Link>
           <Link to="/dispecink" className="hidden md:inline text-muted-foreground hover:text-primary">Dispečink</Link>
+          {user ? <Link to="/ucet" className="flex items-center gap-1 hover:text-primary"><UserRound className="h-4 w-4" /> Můj účet</Link> : <Link to="/auth" className="hover:text-primary">Přihlásit</Link>}
           <a href="/#objednat" className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90">Objednat</a>
         </nav>
       </div>

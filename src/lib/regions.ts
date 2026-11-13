@@ -1,4 +1,5 @@
 export const REGIONS = ["Praha", "Středočeský kraj", "Jihočeský kraj", "Plzeňský kraj", "Karlovarský kraj", "Ústecký kraj", "Liberecký kraj", "Královéhradecký kraj", "Pardubický kraj", "Kraj Vysočina", "Jihomoravský kraj", "Olomoucký kraj", "Zlínský kraj", "Moravskoslezský kraj"] as const;
+export type Region = (typeof REGIONS)[number];
 
 export function canOffer(request: { trade: string; region: string | null }, craftsman: { trade: string; region: string | null; approved: boolean; available: boolean }) {
   return craftsman.approved && craftsman.available && request.region !== null && request.region === craftsman.region && request.trade === craftsman.trade;

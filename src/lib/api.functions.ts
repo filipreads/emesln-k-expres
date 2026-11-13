@@ -18,7 +18,16 @@ const requestSchema = z.object({
   region: z.enum(REGIONS),
   description: z.string().trim().min(5).max(2000),
   phone,
+  postal_code: z.string().trim().regex(/^(\d{3}\s?\d{2})?$/, "PSČ má 5 číslic").optional().transform((v) => v || null),
 });
+
+async function optionalUser(db: Awaited<ReturnType<typeof admin>>) {
+  const { getRequestHeader } = await import("@tanstack/react-start/server");
+  const h = getRequestHeader("authorization");
+  if (!h?.startsWith("Bearer ")) return null;
+  const { data } = await db.auth.getUser(h.slice(7));
+  return data.user?.id ?? null;
+}
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -32,7 +41,7 @@ export const submitRequest = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const parsed = requestSchema.parse(Object.fromEntries(
-      ["urgency", "trade", "address", "district", "region", "description", "phone"].map((k) => [k, data.get(k)]),
+      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code"].map((k) => [k, data.get(k) ?? undefined]),
     ));
     const db = await admin();
     let photo_path: string | null = null;
@@ -47,7 +56,7 @@ export const submitRequest = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await db
       .from("service_requests")
-      .insert({ ...parsed, city: parsed.district, photo_path })
+      .insert({ ...parsed, city: parsed.district, photo_path, customer_user_id: await optionalUser(db) })
       .select("id,tracking_token")
       .single();
     if (error) throw new Error("Uložení selhalo");
@@ -81,7 +90,7 @@ export const submitApplication = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const db = await admin();
-    const { error } = await db.from("craftsman_applications").insert(data);
+    const { error } = await db.from("craftsman_applications").insert({ ...data, user_id: await optionalUser(db) });
     if (error) throw new Error("Uložení selhalo");
     return { ok: true };
   });
