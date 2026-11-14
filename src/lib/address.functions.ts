@@ -22,7 +22,7 @@ export const suggestAddress = createServerFn({ method: "POST" })
     try {
       const res = await fetch(url, { headers: { "User-Agent": "FofrMistr/1.0" } });
       if (!res.ok) return [] as AddressSuggestion[];
-      const json = (await res.json()) as { features: { properties: Record<string, string> }[] };
+      const json = (await res.json()) as { features: { properties: Partial<Record<"countrycode"|"osm_value"|"street"|"type"|"name"|"housenumber"|"city"|"district"|"postcode"|"state", string>> }[] };
       const out: AddressSuggestion[] = [];
       for (const { properties: p } of json.features ?? []) {
         if (p.countrycode !== "CZ") continue;

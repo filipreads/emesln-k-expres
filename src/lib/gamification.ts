@@ -8,7 +8,7 @@ export const LEVEL_SIZE = 300;
 
 function hasStreak(dates: number[], count: number, days: number) {
   const s = [...dates].sort((a, b) => a - b);
-  for (let i = 0; i + count - 1 < s.length; i++) if (s[i + count - 1] - s[i] <= days * 86400000) return true;
+  for (let i = 0; i + count - 1 < s.length; i++) if (s[i + count - 1]! - s[i]! <= days * 86400000) return true;
   return false;
 }
 

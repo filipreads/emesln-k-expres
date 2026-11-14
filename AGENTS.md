@@ -33,3 +33,6 @@ use the editor.
 - Submitted orders run one awaited AI classification through the shared server-only workflow; failure or uncertainty requires dispatcher review instead of replaying inference. Why: avoid duplicate AI billing and unsafe dispatch.
 - Offer creation matches approved, available craftspeople by region and trade; acceptance uses a service-role-only database function with row locks. Why: prevent two craftspeople from accepting the same order.
 - Customer and craftsman pages use unguessable capability tokens, validated server-side with narrow data projections; never expose tokens through public lists. Why: retain the account-free concierge model without exposing customer details.
+- Optional user accounts (email, Google, Apple) link orders/applications via customer_user_id / user_id, resolved server-side from the bearer token; guest ordering stays possible. Why: keep the account-free concierge flow while rewarding signed-in users.
+- Gamification (points, levels, achievements) is computed on read from order data in src/lib/gamification.ts, not stored. Why: no drift between badges and real order history.
+- Address and postal-code suggestions use the free Photon (OSM) geocoder via a server function, limited to CZ. Why: no API key needed.
