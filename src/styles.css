@@ -73,6 +73,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-hero: 0 22px 45px -22px color-mix(in oklab, var(--primary) 55%, transparent);
 }
 
 :root {
@@ -123,4 +124,41 @@
     font-family: var(--font-sans);
   }
   h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+}
+
+@keyframes hero-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+@utility hero-ambient {
+  background:
+    radial-gradient(70% 55% at 12% 0%, color-mix(in oklab, var(--primary) 26%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 92% 12%, color-mix(in oklab, var(--primary) 16%, transparent), transparent 72%),
+    radial-gradient(40% 40% at 50% 100%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 70%),
+    var(--secondary);
+}
+
+@utility hero-halo {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -25% -10% auto -10%;
+    height: 65%;
+    pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 0%, color-mix(in oklab, var(--primary) 30%, transparent), transparent 70%);
+    animation: hero-glow 9s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

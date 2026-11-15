@@ -12,9 +12,13 @@ import { cn } from "@/lib/utils";
 import { AddressFields } from "@/components/AddressFields";
 import { Link } from "@tanstack/react-router";
 
-export function RequestForm() {
+type Props = { trade?: Trade; onTradeChange?: (t: Trade) => void };
+
+export function RequestForm({ trade: controlled, onTradeChange }: Props = {}) {
   const [urgency, setUrgency] = useState<"havarie" | "dnes">("havarie");
-  const [trade, setTrade] = useState<Trade>("voda");
+  const [ownTrade, setOwnTrade] = useState<Trade>("voda");
+  const trade = controlled ?? ownTrade;
+  const setTrade = (t: Trade) => (onTradeChange ? onTradeChange(t) : setOwnTrade(t));
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [token, setToken] = useState("");
