@@ -54,20 +54,25 @@ function TradeCard({ trade, selected, onPick }: { trade: Trade; selected: boolea
         "hover:-translate-y-1 hover:shadow-hero focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         selected
           ? "border-primary bg-primary/10"
-          : "border-secondary-foreground/15 bg-secondary-foreground/5 hover:border-primary/60",
+          : "border-secondary-foreground/25 bg-secondary-foreground/10 hover:border-primary/60",
       )}
     >
-      <span className={cn(
-        "inline-flex h-12 w-12 items-center justify-center rounded-xl transition",
-        selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-      )}>
-        <Icon className="h-6 w-6" />
+      <span className="flex items-start justify-between gap-3">
+        <span className={cn(
+          "inline-flex h-12 w-12 items-center justify-center rounded-xl transition",
+          selected ? "bg-primary text-primary-foreground ring-2 ring-secondary-foreground/30" : "bg-primary/90 text-primary-foreground group-hover:bg-primary",
+        )}>
+          <Icon className="h-6 w-6" strokeWidth={2.25} />
+        </span>
+        <span className="shrink-0 rounded-full border border-secondary-foreground/25 bg-secondary-foreground/10 px-3 py-1 text-sm font-bold">
+          od {TRADE_INFO[trade].rate} Kč/h
+        </span>
       </span>
       <span className="mt-4 text-lg font-extrabold">{TRADE_INFO[trade].name}</span>
-      <span className="mt-1 text-sm opacity-75">{HERO_COPY[trade]}</span>
-      <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-bold text-primary">
+      <span className="mt-1 text-[15px] opacity-90">{HERO_COPY[trade]}</span>
+      <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-bold text-secondary-foreground">
         Vybrat: {TRADE_INFO[trade].name}
-        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+        <ArrowRight className="h-4 w-4 text-primary-soft transition group-hover:translate-x-1" />
       </span>
     </button>
   );
@@ -85,14 +90,14 @@ function Index() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <section className="hero-ambient hero-halo text-secondary-foreground">
+      <section className="hero-ambient hero-halo overflow-hidden text-secondary-foreground">
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.12fr_0.88fr] md:py-24">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary">
               <span className={cn("h-2 w-2 rounded-full", av.open ? "animate-pulse bg-primary" : "bg-muted-foreground")} />
               {av.open ? `Síť v ČR v pohotovosti • právě ${av.count} ${plural(av.count)}` : "Dispečink právě ověřuje volné mistry"}
             </div>
-            <h1 className="mt-6 text-4xl font-black leading-[1.05] md:text-6xl">
+            <h1 className="mt-6 text-4xl font-black leading-[1.12] md:leading-[1.05] md:text-6xl">
               Řemeslník nebo hodinový manžel u vás, <span className="text-primary">když to hoří.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg opacity-80">
@@ -100,12 +105,13 @@ function Index() {
             </p>
           </div>
 
-          <div className="self-center rounded-2xl border border-secondary-foreground/15 bg-secondary-foreground/5 p-8">
+          <div className="self-center rounded-2xl border border-secondary-foreground/15 bg-secondary-foreground/5 p-6 md:p-8">
             <div className="flex items-center gap-3 text-sm uppercase tracking-widest opacity-70"><Clock className="h-4 w-4" /> Dostupnost sítě v ČR</div>
             {av.open ? (
               <>
                 <div className="mt-3 text-4xl font-black text-primary">Dle vaší lokality</div>
-                <p className="mt-3 opacity-80">Počet volných mistrů je za celou síť, nikoli pro vaši obec. Čas příjezdu potvrdí řemeslník při přijetí zakázky.</p>
+                <p className="mt-3 opacity-80 md:hidden">Pošlete poptávku a dispečink vám zavolá s reálným časem.</p>
+                <p className="mt-3 hidden opacity-80 md:block">Počet volných mistrů je za celou síť, nikoli pro vaši obec. Čas příjezdu potvrdí řemeslník při přijetí zakázky.</p>
               </>
             ) : (
               <>
@@ -114,8 +120,8 @@ function Index() {
               </>
             )}
             <p className="mt-2 text-xs opacity-60">Aktualizováno {av.updated.getTime() > 0 ? av.updated.toLocaleString("cs-CZ") : "—"}</p>
-            <div className="mt-6 grid grid-cols-3 gap-3 text-center text-sm">
-              <div><div className="text-2xl font-black">{av.open ? av.count : 0}</div><div className="opacity-70">volných mistrů</div></div>
+            <div className={cn("mt-6 grid gap-3 text-center text-sm", av.open ? "grid-cols-3" : "grid-cols-2")}>
+              {av.open && <div><div className="text-2xl font-black">{av.count}</div><div className="opacity-70">volných mistrů</div></div>}
               <div><div className="text-2xl font-black">{CALLOUT_FEE} Kč</div><div className="opacity-70">výjezd</div></div>
               <div><div className="text-2xl font-black">0 Kč</div><div className="opacity-70">předem</div></div>
             </div>
@@ -128,31 +134,18 @@ function Index() {
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {HERO_TRADES.map((t) => <TradeCard key={t} trade={t} selected={trade === t} onPick={pick} />)}
           </div>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-secondary-foreground/20 bg-secondary-foreground/5 px-4 py-2 text-sm font-semibold">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-secondary-foreground/25 bg-secondary-foreground/10 px-4 py-2 text-sm font-semibold">
               <Wallet className="h-4 w-4 text-primary" /> Výjezd {CALLOUT_FEE} Kč s diagnostikou
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-secondary-foreground/20 bg-secondary-foreground/5 px-4 py-2 text-sm font-semibold">
+            <span className="inline-flex items-center gap-2 rounded-full border border-secondary-foreground/25 bg-secondary-foreground/10 px-4 py-2 text-sm font-semibold">
               <ShieldCheck className="h-4 w-4 text-primary" /> Řemeslníci ověření a pojištění
             </span>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-3xl font-black md:text-4xl">Co vyřešíme</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {(Object.keys(TRADE_INFO) as Trade[]).map((t) => {
-            const Icon = ICONS[t];
-            return (
-              <div key={t} className="rounded-xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary">
-                <Icon className="h-8 w-8 text-primary" />
-                <h3 className="mt-4 text-xl font-extrabold">{TRADE_INFO[t].name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{TRADE_INFO[t].desc}</p>
-                <p className="mt-4 text-sm font-semibold">od {TRADE_INFO[t].rate} Kč/h</p>
-              </div>
-            );
-          })}
+          <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 text-center text-sm opacity-80">
+            <Zap className="h-4 w-4 shrink-0 text-primary" />
+            <span>Také elektro – výpadek proudu, jistič, zásuvky, světla. Objednáte ve formuláři níže.</span>
+          </p>
         </div>
       </section>
 
