@@ -1,4 +1,5 @@
 [[libraries]]
-project_id = "4227fe68-b89b-43e3-8375-cb42efff3fc1"
-version = "1.0.0"
-slug = "project-migration-studio-e060ca"
+  name = "Project Migration Studio"
+  project_id = "4227fe68-b89b-43e3-8375-cb42efff3fc1"
+  slug = "project-migration-studio-e060ca"
+  version = "1.0.0"
