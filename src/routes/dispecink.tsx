@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, RefreshCw, Siren, Sparkles } from "lucide-react";
-import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, STATUSES } from "@/lib/api.functions";
+import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, markCallback, STATUSES } from "@/lib/api.functions";
 import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,20 @@ function Dashboard() {
           </div>
         </div>
 
+        {data.callbacks.length > 0 && (
+          <div className="mt-6 rounded-xl border-2 border-primary bg-card p-4">
+            <div className="font-bold">Zavolat zpět ({data.callbacks.length})</div>
+            <ul className="mt-2 space-y-2">
+              {data.callbacks.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span><a href={`tel:${c.phone}`} className="font-bold text-primary">{c.phone}</a> · {c.trade} · {new Date(c.created_at).toLocaleString("cs-CZ")}</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await markCallback({ data: { pin, id: c.id } }); load(pin); }}>Vyřízeno</Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <form onSubmit={(e) => { e.preventDefault(); saveAvail(); }} className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
           <div className="font-bold">Dostupnost sítě v ČR</div>
           <label className="text-sm">Volní mistři<Input type="number" min={0} value={avail.count} onChange={(e) => setAvail({ ...avail, count: e.target.value })} className="w-28" /></label>
@@ -163,7 +177,7 @@ function Dashboard() {
                         {r.ai_reason && <p className="mt-2 text-sm"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />{r.ai_reason}</p>}
                         {r.automation_note && <p className="mt-2 text-sm font-semibold text-destructive">{r.automation_note}</p>}
                         <Link to="/objednavka" search={{ token: r.tracking_token }} className="mt-2 block text-sm text-primary">Sledování pro zákazníka</Link>
-                        <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary">{r.phone}</a>
+                        <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary">{r.customer_name ? `${r.customer_name} · ` : ""}{r.phone}</a>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">

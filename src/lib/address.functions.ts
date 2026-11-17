@@ -38,3 +38,22 @@ export const suggestAddress = createServerFn({ method: "POST" })
       return [] as AddressSuggestion[];
     }
   });
+
+export const reverseAddress = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ lat: z.number().min(48).max(52), lon: z.number().min(12).max(19) }))
+  .handler(async ({ data }) => {
+    const url = new URL("https://photon.komoot.io/reverse");
+    url.searchParams.set("lat", String(data.lat));
+    url.searchParams.set("lon", String(data.lon));
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "FofrMistr/1.0" } });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { features: { properties: Partial<Record<"countrycode"|"street"|"name"|"housenumber"|"city"|"district"|"postcode"|"state", string>> }[] };
+      const p = json.features?.[0]?.properties;
+      if (!p || p.countrycode !== "CZ") return null;
+      const street = [p.street ?? p.name, p.housenumber].filter(Boolean).join(" ");
+      return { label: street, street, city: p.city ?? p.district ?? "", postal_code: p.postcode ?? "", region: toRegion(p.state) } satisfies AddressSuggestion;
+    } catch {
+      return null;
+    }
+  });

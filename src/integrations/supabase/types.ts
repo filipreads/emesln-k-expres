@@ -35,6 +35,30 @@ export type Database = {
         }
         Relationships: []
       }
+      callback_requests: {
+        Row: {
+          created_at: string
+          handled: boolean
+          id: string
+          phone: string
+          trade: string
+        }
+        Insert: {
+          created_at?: string
+          handled?: boolean
+          id?: string
+          phone: string
+          trade: string
+        }
+        Update: {
+          created_at?: string
+          handled?: boolean
+          id?: string
+          phone?: string
+          trade?: string
+        }
+        Relationships: []
+      }
       craftsman_applications: {
         Row: {
           approved: boolean
@@ -144,6 +168,7 @@ export type Database = {
           broadcast_count: number
           city: string | null
           created_at: string
+          customer_name: string | null
           customer_user_id: string | null
           description: string
           district: string
@@ -167,6 +192,7 @@ export type Database = {
           broadcast_count?: number
           city?: string | null
           created_at?: string
+          customer_name?: string | null
           customer_user_id?: string | null
           description: string
           district: string
@@ -190,6 +216,7 @@ export type Database = {
           broadcast_count?: number
           city?: string | null
           created_at?: string
+          customer_name?: string | null
           customer_user_id?: string | null
           description?: string
           district?: string

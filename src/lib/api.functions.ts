@@ -18,6 +18,7 @@ const requestSchema = z.object({
   region: z.enum(REGIONS),
   description: z.string().trim().min(5).max(2000),
   phone,
+  customer_name: z.string().trim().max(100).optional().transform((v) => v || null),
   postal_code: z.string().trim().regex(/^(\d{3}\s?\d{2})?$/, "PSČ má 5 číslic").optional().transform((v) => v || null),
 });
 
@@ -41,7 +42,7 @@ export const submitRequest = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const parsed = requestSchema.parse(Object.fromEntries(
-      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code"].map((k) => [k, data.get(k) ?? undefined]),
+      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code", "customer_name"].map((k) => [k, data.get(k) ?? undefined]),
     ));
     const db = await admin();
     let photo_path: string | null = null;
@@ -109,6 +110,7 @@ export const listDashboard = createServerFn({ method: "POST" })
       db.from("service_requests").select("*").order("created_at", { ascending: false }).limit(200),
       db.from("craftsman_applications").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
+    const { data: callbacks } = await db.from("callback_requests").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(100);
     if (requestsResult.error || craftsResult.error) throw new Error("Načtení nástěnky selhalo");
     const withPhotos = [];
     for (const r of requestsResult.data ?? []) {
@@ -119,7 +121,7 @@ export const listDashboard = createServerFn({ method: "POST" })
       })();
       withPhotos.push(result);
     }
-    return { requests: withPhotos, craftsmen: craftsResult.data ?? [] };
+    return { requests: withPhotos, craftsmen: craftsResult.data ?? [], callbacks: callbacks ?? [] };
   });
 
 export const updateRequest = createServerFn({ method: "POST" })
@@ -177,4 +179,23 @@ export const classifyIssue = createServerFn({ method: "POST" })
     }
     const { analyze } = await import("./workflow.server");
     return analyze(data.description, image);
+  });
+
+export const submitCallback = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ phone, trade: z.enum(TRADES) }))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("callback_requests").insert(data);
+    if (error) throw new Error("Uložení selhalo");
+    return { ok: true };
+  });
+
+export const markCallback = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ pin: z.string().max(200), id: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    const db = await admin();
+    const { error } = await db.from("callback_requests").update({ handled: true }).eq("id", data.id);
+    if (error) throw new Error("Uložení selhalo");
+    return { ok: true };
   });
