@@ -37,3 +37,4 @@ use the editor.
 - Gamification (points, levels, achievements) is computed on read from order data in src/lib/gamification.ts, not stored. Why: no drift between badges and real order history.
 - Customer account order details use the authenticated account function's owner-filtered projection and refresh every 15 seconds. Why: keep private job details scoped to their customer and displayed statuses current.
 - Address and postal-code suggestions use the free Photon (OSM) geocoder via a server function, limited to CZ. Why: no API key needed.
+- Home order form is a 3-step wizard (src/components/OrderWizard.tsx) with a localStorage draft and client-side photo compression; it still posts FormData to submitRequest. Callback requests go to a service-role-only callback_requests table shown on /dispecink. Why: faster ordering without changing the server workflow.

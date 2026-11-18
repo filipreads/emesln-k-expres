@@ -4,5 +4,6 @@
 - [x] AI rozbor popisu i fotografie s bezpečným ručním dořešením při chybě.
 - [x] Automatické nabídky ověřeným dostupným řemeslníkům, bezpečné přijetí, aktualizace stavu a sledování zákazníkem.
 - [x] Přepracovat hero sekci: texty, tři karty oborů, garance, kontrast a chování na mobilu.
+- [x] Redesign úvodní stránky: nová navigace, mobilní lišta, zpětné zavolání, 4 karty se štítky, scroll-telling, ceny, ukázky, 3krokový průvodce, FAQ, patička, strukturovaná data.
 - [ ] SMS oznámení (vyžaduje připojenou službu a odesílací číslo).
 - [x] Ověřit průběh a uložit změny.

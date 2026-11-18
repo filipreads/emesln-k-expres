@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
-export type Preset = { trade: Trade; issue?: string; nonce: number };
+export type Preset = { trade: Trade; issue?: string | undefined; nonce: number };
 
 type Draft = {
   urgency: "havarie" | "dnes"; trade: Trade; description: string;
@@ -62,7 +62,7 @@ function Suggestions({ items, onPick }: { items: AddressSuggestion[]; onPick: (s
   );
 }
 
-export function OrderWizard({ preset }: { preset?: Preset }) {
+export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
   const [d, setD] = useState<Draft>(EMPTY);
   const [step, setStep] = useState(0);
   const [photo, setPhoto] = useState<File | null>(null);
