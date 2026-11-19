@@ -7,6 +7,7 @@
  */
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
+@import "./design-system/project-migration-studio-e060ca/styles.css" layer(base);
 @source "../src";
 
 @custom-variant dark (&:is(.dark *));
@@ -64,8 +65,9 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
   --color-success: var(--success);
-  --font-display: "Archivo", sans-serif;
-  --font-sans: "Hanken Grotesk", sans-serif;
+  --font-display: "Inter Tight", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -78,41 +80,8 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: oklch(0.985 0.006 80);
-  --foreground: oklch(0.2 0.01 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 60);
-  --primary: oklch(0.66 0.2 42);
-  --primary-soft: oklch(0.79 0.15 55);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.22 0.012 60);
-  --secondary-foreground: oklch(0.97 0.006 80);
-  --muted: oklch(0.95 0.008 80);
-  --muted-foreground: oklch(0.48 0.015 60);
-  --accent: oklch(0.93 0.05 60);
-  --accent-foreground: oklch(0.25 0.02 50);
-  --success: oklch(0.62 0.15 150);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.89 0.01 80);
-  --input: oklch(0.89 0.01 80);
-  --ring: oklch(0.66 0.2 42);
-  --chart-1: oklch(0.66 0.2 42);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0.006 80);
-  --sidebar-foreground: oklch(0.2 0.01 60);
-  --sidebar-primary: oklch(0.66 0.2 42);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.008 80);
-  --sidebar-accent-foreground: oklch(0.2 0.01 60);
-  --sidebar-border: oklch(0.89 0.01 80);
-  --sidebar-ring: oklch(0.66 0.2 42);
+  --primary-soft: color-mix(in oklab, var(--primary) 55%, var(--background));
+  --success: var(--chart-2);
 }
 
 @layer base {
