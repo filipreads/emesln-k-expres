@@ -36,6 +36,13 @@
       "when": 1794951628256,
       "tag": "0004_customer_name_and_callbacks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795120585605,
+      "tag": "0005_ratings",
+      "breakpoints": true
     }
   ]
 }

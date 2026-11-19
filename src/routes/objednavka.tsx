@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { RefreshCw, CheckCircle2, Circle } from "lucide-react";
-import { trackOrder } from "@/lib/workflow.functions";
+import { RatingForm } from "@/components/RatingForm";
+import { trackOrder, rateCraftsman } from "@/lib/workflow.functions";
 import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ function Tracking() {
       {data.arrival_minutes && data.status !== "dokonceno" && <p className="mt-4 text-lg font-bold">Potvrzený odhad dojezdu při přijetí: {data.arrival_minutes} minut</p>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
       <ol className="mt-8 space-y-2 rounded-xl border border-border bg-card p-4">{Object.entries(STATUS_LABEL).map(([s,l], i, all) => { const cur = all.findIndex(([k]) => k === data.status); return <li key={s} className={cn("flex items-center gap-3 rounded-lg p-3", i === cur ? "bg-primary text-primary-foreground font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <Circle className="h-5 w-5 shrink-0" />}{l}</li>; })}</ol>
+      {data.status === "dokonceno" && <div className="mt-8">{data.rated ? <p className="rounded-xl border border-border bg-card p-5 font-semibold">Děkujeme, vaše hodnocení jsme dostali.</p> : <RatingForm title={`Jak jste byli spokojeni${data.craftsman ? ` s mistrem ${data.craftsman}` : ""}?`} allowPublic onSubmit={async v => { await rateCraftsman({ data: { token: token!, ...v } }); await load(); }} />}</div>}
       <p className="mt-6 text-xs text-muted-foreground">Poslední změna: {new Date(data.updated_at).toLocaleString("cs-CZ")}</p>
     </>}
   </main><SiteFooter /></div>;

@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
-import { craftsmanPortal, acceptOffer, progressJob } from "@/lib/workflow.functions";
+import { RatingForm } from "@/components/RatingForm";
+import { craftsmanPortal, acceptOffer, progressJob, rateCustomer, myRatings } from "@/lib/workflow.functions";
 import { STATUS_LABEL } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -22,9 +23,10 @@ function Portal() {
   const [error, setError] = useState("");
   const [minutes, setMinutes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [rated, setRated] = useState<string[]>([]);
   const load = useCallback(async () => {
     if (!token || !z.string().uuid().safeParse(token).success) { setError("Otevřete soukromý odkaz od dispečinku."); return; }
-    try { setData(await craftsmanPortal({ data: { token } })); setError(""); }
+    try { const d = await craftsmanPortal({ data: { token } }); setData(d); setError(""); const done = d.jobs.filter(j => j.status === "dokonceno").map(j => j.id); setRated(await myRatings({ data: { ids: done, direction: "craftsman_to_customer" } })); }
     catch (e) { setError(e instanceof Error ? e.message : "Načtení selhalo"); setData(null); }
   }, [token]);
   useEffect(() => { load(); const interval = setInterval(load, 15000); return () => clearInterval(interval); }, [load]);
@@ -47,6 +49,7 @@ function Portal() {
       <div className="mt-4 space-y-4">{data.jobs.map(j => <article key={j.id} className="rounded-lg border border-border bg-card p-5"><div className="font-bold">{j.address}, {j.city ?? j.district}</div><p className="mt-2 text-sm">{j.description}</p><Badge className="mt-3" variant={j.status === "dokonceno" ? "secondary" : "default"}>{STATUS_LABEL[j.status]}</Badge><a className="mt-3 block font-semibold text-primary underline underline-offset-4" href={`tel:${j.phone}`}>{j.phone}</a>
         {j.status === "prijato" && <Button className="mt-4 w-full sm:w-auto" disabled={busy} onClick={() => { if (token) act(() => progressJob({ data: { token, id: j.id, status: "na_ceste" } })); }}>Vyrážím</Button>}
         {j.status === "na_ceste" && <Button className="mt-4 w-full sm:w-auto" disabled={busy} onClick={() => { if (token) act(() => progressJob({ data: { token, id: j.id, status: "dokonceno" } })); }}>Dokončit zakázku</Button>}
+        {j.status === "dokonceno" && (rated.includes(j.id) ? <p className="mt-4 text-sm text-muted-foreground">Zákazníka jste ohodnotili.</p> : <div className="mt-4"><RatingForm title="Jak se vám spolupracovalo se zákazníkem?" onSubmit={async v => { if (token) { await rateCustomer({ data: { token, id: j.id, stars: v.stars, comment: v.comment } }); await load(); } }} /></div>)}
       </article>)}</div>
     </>}
   </main></div>;

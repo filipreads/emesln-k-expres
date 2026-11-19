@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, CheckCircle2 } from "lucide-react";
+import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, CheckCircle2, MessageCircleQuestion, Quote } from "lucide-react";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { OrderWizard, type Preset } from "@/components/OrderWizard";
 import { MobileBar, CallbackDialog } from "@/components/MobileActions";
 import { getAvailability } from "@/lib/api.functions";
+import { publicReviews } from "@/lib/workflow.functions";
+import { Stars } from "@/components/RatingForm";
+import { Card, CardContent } from "@/components/ui/card";
 import { TRADE_INFO, SERVICE_ORDER, QUICK_ISSUES, CALLOUT_FEE, FAQ, type Trade } from "@/lib/content";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -37,7 +40,7 @@ export const Route = createFileRoute("/")({
       }) },
     ],
   }),
-  loader: () => getAvailability(),
+  loader: async () => { const [av, rv] = await Promise.all([getAvailability(), publicReviews().catch(() => ({ reviews: [], count: 0, average: null }))]); return { ...av, rv }; },
   component: Index,
 });
 
@@ -202,16 +205,47 @@ function Index() {
         <div className="md:col-span-3"><OrderWizard preset={preset} /></div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 pb-20">
-        <h2 className="text-3xl font-black md:text-4xl">Časté dotazy</h2>
-        <Accordion type="single" collapsible className="mt-6">
-          {FAQ.map(([q, ans]) => (
-            <AccordionItem key={q} value={q}>
-              <AccordionTrigger className="text-left text-base font-bold">{q}</AccordionTrigger>
-              <AccordionContent className="text-base text-muted-foreground">{ans}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+      <section id="dotazy" className="scroll-mt-20 bg-muted">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 lg:grid-cols-2">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-primary"><Quote className="h-4 w-4" />Řekli o nás</p>
+            <h2 className="mt-2 text-3xl font-black md:text-4xl">Hodnocení od zákazníků</h2>
+            {a.rv.count > 0 && a.rv.average != null ? (
+              <div className="mt-4 flex items-center gap-3"><Stars value={a.rv.average} /><span className="font-bold">{a.rv.average.toLocaleString("cs-CZ")} / 5</span><span className="text-muted-foreground">· {a.rv.count} hodnocení</span></div>
+            ) : null}
+            <div className="mt-6 space-y-4">
+              {a.rv.reviews.length ? a.rv.reviews.map((r, i) => (
+                <Card key={i}><CardContent className="pt-6"><Stars value={r.stars} size="h-4 w-4" /><p className="mt-3 text-base">„{r.comment}"</p><p className="mt-3 text-sm font-semibold text-muted-foreground">{r.author_name}</p></CardContent></Card>
+              )) : (
+                <Card><CardContent className="pt-6"><p className="text-base">Hodnocení sbíráme od skutečných zákazníků po každé dokončené zakázce. Zobrazíme je tady, jakmile je budeme mít – nic si nevymýšlíme.</p></CardContent></Card>
+              )}
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">Hodnotí se oboustranně: zákazník hodnotí mistra a mistr zákazníka. Díky tomu k vám jezdí ti nejlepší.</p>
+          </div>
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-primary"><MessageCircleQuestion className="h-4 w-4" />Časté dotazy</p>
+            <h2 className="mt-2 text-3xl font-black md:text-4xl">Na co se ptáte</h2>
+            <Accordion type="single" collapsible className="mt-6 rounded-xl border border-border bg-card px-5">
+              {FAQ.map(([q, ans]) => (
+                <AccordionItem key={q} value={q}>
+                  <AccordionTrigger className="text-left text-base font-bold">{q}</AccordionTrigger>
+                  <AccordionContent className="text-base text-muted-foreground">{ans}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
+      <section className="hero-ambient overflow-hidden text-secondary-foreground">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
+          <h2 className="text-3xl font-black md:text-5xl">Něco teče, cvaklo nebo zaklaplo?</h2>
+          <p className="max-w-xl text-lg opacity-90">Objednávka zabere dvě minuty. Výjezd {CALLOUT_FEE} Kč s diagnostikou, cenu opravy znáte předem.</p>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <Button size="lg" onClick={scrollToOrder}>Objednat mistra <ArrowRight className="h-4 w-4" /></Button>
+            <Button size="lg" variant="secondary" onClick={() => setCb(true)}><PhoneCall className="h-4 w-4" />Zavolejte mi</Button>
+          </div>
+        </div>
       </section>
 
       <SiteFooter />

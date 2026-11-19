@@ -6,11 +6,12 @@ const tokenSchema = z.object({ token: z.string().uuid() });
 
 export const trackOrder = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const { data: r, error } = await db.from("service_requests").select("status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at").eq("tracking_token", data.token).single();
+  const { data: r, error } = await db.from("service_requests").select("id,status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at").eq("tracking_token", data.token).single();
   if (error || !r) throw new Error("Objednávka nenalezena");
   let name: string | null = null;
   if (r.assigned_craftsman_id) { const { data: c } = await db.from("craftsman_applications").select("name").eq("id", r.assigned_craftsman_id).single(); name = c?.name ?? null; }
-  return { status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, craftsman: name };
+  const { data: rated } = await db.from("ratings").select("id").eq("request_id", r.id).eq("direction", "customer_to_craftsman").maybeSingle();
+  return { rated: !!rated, status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, craftsman: name };
 });
 
 export const craftsmanPortal = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {
@@ -52,4 +53,41 @@ export const setCraftsman = createServerFn({ method: "POST" }).inputValidator(z.
   const { error } = await db.from("craftsman_applications").update({ approved: data.approved, available: data.approved && data.available }).eq("id", data.id);
   if (error) throw new Error("Uložení řemeslníka selhalo");
   return { ok: true };
+});
+const rateFields = { stars: z.number().int().min(1).max(5), comment: z.string().trim().max(500).optional() };
+
+export const rateCraftsman = createServerFn({ method: "POST" }).inputValidator(tokenSchema.extend({ ...rateFields, public_ok: z.boolean() })).handler(async ({ data }) => {
+  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  const { data: r } = await db.from("service_requests").select("id,status,customer_name,city").eq("tracking_token", data.token).single();
+  if (!r || r.status !== "dokonceno") throw new Error("Hodnotit lze až dokončenou zakázku");
+  const first = (r.customer_name ?? "").trim().split(/\s+/)[0] || "Zákazník";
+  const { error } = await db.from("ratings").insert({ request_id: r.id, direction: "customer_to_craftsman", stars: data.stars, comment: data.comment || null, public_ok: data.public_ok, author_name: r.city ? `${first}, ${r.city}` : first });
+  if (error) throw new Error(error.code === "23505" ? "Tuto zakázku už jste hodnotili" : "Uložení hodnocení selhalo");
+  return { ok: true };
+});
+
+export const rateCustomer = createServerFn({ method: "POST" }).inputValidator(tokenSchema.extend({ ...rateFields, id: z.string().uuid() })).handler(async ({ data }) => {
+  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  const { data: c } = await db.from("craftsman_applications").select("id,name").eq("portal_token", data.token).eq("approved", true).single();
+  if (!c) throw new Error("Neplatný přístup");
+  const { data: r } = await db.from("service_requests").select("id,status").eq("id", data.id).eq("assigned_craftsman_id", c.id).single();
+  if (!r || r.status !== "dokonceno") throw new Error("Hodnotit lze až dokončenou zakázku");
+  const { error } = await db.from("ratings").insert({ request_id: r.id, direction: "craftsman_to_customer", stars: data.stars, comment: data.comment || null, author_name: c.name });
+  if (error) throw new Error(error.code === "23505" ? "Zákazníka už jste hodnotili" : "Uložení hodnocení selhalo");
+  return { ok: true };
+});
+
+export const myRatings = createServerFn({ method: "POST" }).inputValidator(z.object({ ids: z.array(z.string().uuid()).max(50), direction: z.enum(["customer_to_craftsman", "craftsman_to_customer"]) })).handler(async ({ data }) => {
+  if (!data.ids.length) return [] as string[];
+  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  const { data: rows } = await db.from("ratings").select("request_id").in("request_id", data.ids).eq("direction", data.direction);
+  return (rows ?? []).map(r => r.request_id);
+});
+
+export const publicReviews = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  const { data: rows } = await db.from("ratings").select("stars,comment,author_name,created_at").eq("direction", "customer_to_craftsman").eq("public_ok", true).not("comment", "is", null).order("created_at", { ascending: false }).limit(6);
+  const { data: all } = await db.from("ratings").select("stars").eq("direction", "customer_to_craftsman");
+  const count = all?.length ?? 0;
+  return { reviews: rows ?? [], count, average: count ? Math.round((all!.reduce((s, r) => s + r.stars, 0) / count) * 10) / 10 : null };
 });

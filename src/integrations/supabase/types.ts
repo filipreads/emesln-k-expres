@@ -158,6 +158,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ratings: {
+        Row: {
+          author_name: string | null
+          comment: string | null
+          created_at: string
+          direction: string
+          id: string
+          public_ok: boolean
+          request_id: string
+          stars: number
+        }
+        Insert: {
+          author_name?: string | null
+          comment?: string | null
+          created_at?: string
+          direction: string
+          id?: string
+          public_ok?: boolean
+          request_id: string
+          stars: number
+        }
+        Update: {
+          author_name?: string | null
+          comment?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          public_ok?: boolean
+          request_id?: string
+          stars?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           address: string
