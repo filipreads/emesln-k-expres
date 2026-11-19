@@ -43,9 +43,3 @@ export const FAQ = [
   ["Kde všude působíte?", "Poptávky přijímáme v celé České republice. Rychlost dojezdu se liší podle lokality."],
 ] as const;
 
-/** Ukázkové výjezdy – ilustrační příklady, nikoli skutečné reference. */
-export const SAMPLE_JOBS = [
-  { trade: "voda" as Trade, title: "Prasklá trubka pod dřezem", place: "Brno-střed", minutes: 42, total: 1580 },
-  { trade: "zamecnik" as Trade, title: "Zabouchnuté dveře bytu", place: "Praha 6", minutes: 35, total: 1640 },
-  { trade: "manzel" as Trade, title: "Montáž skříně a 3 polic", place: "Olomouc", minutes: 70, total: 2170 },
-];

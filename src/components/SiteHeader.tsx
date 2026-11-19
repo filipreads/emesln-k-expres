@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { UserRound, Zap } from "lucide-react";
 import { useSessionUser } from "@/hooks/use-session";
-import { REGIONS } from "@/lib/regions";
 import { TRADE_INFO, SERVICE_ORDER } from "@/lib/content";
 
 export function SiteHeader() {
@@ -34,9 +33,8 @@ export function SiteFooter() {
   const head = "mb-3 text-xs font-bold uppercase tracking-widest opacity-70";
   return (
     <footer className="border-t border-border bg-secondary pb-24 text-secondary-foreground md:pb-0">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-3">
         <div><div className={head}>Služby</div><ul className={col}>{SERVICE_ORDER.map((t) => <li key={t}><a href="/#objednat" className="hover:text-primary">{TRADE_INFO[t].name}</a></li>)}<li><Link to="/cenik" className="hover:text-primary">Ceník</Link></li></ul></div>
-        <div className="lg:col-span-2"><div className={head}>Kraje ČR</div><ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm opacity-90">{REGIONS.map((r) => <li key={r}>{r}</li>)}</ul></div>
         <div><div className={head}>Pro řemeslníky</div><ul className={col}><li><Link to="/pro-remeslniky" className="hover:text-primary">Přidejte se do sítě</Link></li><li><Link to="/auth" className="hover:text-primary">Přihlásit</Link></li></ul></div>
         <div><div className={head}>Dispečink a právní</div><ul className={col}><li><Link to="/dispecink" className="hover:text-primary">Dispečink</Link></li><li className="opacity-70">Obchodní podmínky (připravujeme)</li><li className="opacity-70">Ochrana osobních údajů (připravujeme)</li></ul></div>
       </div>

@@ -7,3 +7,6 @@
 - [x] Redesign úvodní stránky: nová navigace, mobilní lišta, zpětné zavolání, 4 karty se štítky, scroll-telling, ceny, ukázky, 3krokový průvodce, FAQ, patička, strukturovaná data.
 - [ ] SMS oznámení (vyžaduje připojenou službu a odesílací číslo).
 - [x] Ověřit průběh a uložit změny.
+- [x] Patička: odstranit seznam krajů ČR.
+- [x] Úvodní stránka: odebrat sekci ukázkových výjezdů.
+- [ ] Účty: přehled a čísla nahoře, hezčí odznaky a úrovně, lepší prázdné stavy, rozdělit sekce zákazník / řemeslník.

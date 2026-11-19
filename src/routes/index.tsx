@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, MapPin, CheckCircle2 } from "lucide-react";
+import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, CheckCircle2 } from "lucide-react";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { OrderWizard, type Preset } from "@/components/OrderWizard";
 import { MobileBar, CallbackDialog } from "@/components/MobileActions";
 import { getAvailability } from "@/lib/api.functions";
-import { TRADE_INFO, SERVICE_ORDER, QUICK_ISSUES, CALLOUT_FEE, FAQ, SAMPLE_JOBS, type Trade } from "@/lib/content";
+import { TRADE_INFO, SERVICE_ORDER, QUICK_ISSUES, CALLOUT_FEE, FAQ, type Trade } from "@/lib/content";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -186,25 +186,6 @@ function Index() {
             <div key={t as string} className="rounded-2xl border border-border bg-card p-6">
               <Icon className="h-6 w-6 text-primary" /><h3 className="mt-3 text-lg font-extrabold">{t as string}</h3><p className="mt-1 text-muted-foreground">{d as string}</p>
             </div>); })}
-        </div>
-      </section>
-
-      <section className="bg-muted">
-        <div className="mx-auto max-w-6xl px-4 py-20">
-          <h2 className="text-3xl font-black md:text-4xl">Ukázkové výjezdy</h2>
-          <p className="mt-2 text-muted-foreground">Ilustrační příklady, jak může vypadat čas dojezdu a celková cena.</p>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {SAMPLE_JOBS.map((j) => { const Icon = ICONS[j.trade]; return (
-              <article key={j.title} className="rounded-2xl border border-border bg-card p-6">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Icon className="h-4 w-4 text-primary" /> {TRADE_INFO[j.trade].name}</div>
-                <h3 className="mt-3 text-lg font-extrabold">{j.title}</h3>
-                <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-4 w-4" /> {j.place}</div>
-                <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4">
-                  <div><div className="text-2xl font-black">{j.minutes} min</div><div className="text-sm text-muted-foreground">dojezd</div></div>
-                  <div><div className="text-2xl font-black">{j.total.toLocaleString("cs-CZ")} Kč</div><div className="text-sm text-muted-foreground">celkem</div></div>
-                </div>
-              </article>); })}
-          </div>
         </div>
       </section>
 
