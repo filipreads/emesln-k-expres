@@ -61,7 +61,7 @@ function Account() {
       <SiteHeader />
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-10">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-3xl font-black">Ahoj{data.name ? `, ${data.name}` : ""}</h1>
+          <h1 className="min-w-0 break-words font-display text-2xl font-black sm:text-3xl">Ahoj{data.name ? `, ${data.name}` : ""}</h1>
           <Button variant="outline" onClick={signOut}>Odhlásit</Button>
         </div>
         <section aria-labelledby="orders-heading" className="py-4">
