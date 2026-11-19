@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
-import { RefreshCw, CheckCircle2 } from "lucide-react";
+import { RefreshCw, CheckCircle2, Circle } from "lucide-react";
 import { trackOrder } from "@/lib/workflow.functions";
 import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/objednavka")({
   validateSearch: z.object({ token: z.string().optional().catch(undefined) }),
@@ -24,7 +25,7 @@ function Tracking() {
   }, [token]);
   useEffect(() => { load(); const interval = setInterval(load, 15000); return () => clearInterval(interval); }, [load]);
   return <div className="min-h-screen"><SiteHeader /><main className="mx-auto max-w-2xl px-4 py-12">
-    <div className="flex items-center justify-between gap-4"><h1 className="text-3xl font-black">Vaše objednávka</h1><Button variant="outline" size="icon" aria-label="Obnovit stav" onClick={load}><RefreshCw className="h-4 w-4" /></Button></div>
+    <div className="flex items-center justify-between gap-4"><h1 className="text-2xl font-black sm:text-3xl">Vaše objednávka</h1><Button variant="outline" size="icon" aria-label="Obnovit stav" onClick={load}><RefreshCw className="h-4 w-4" /></Button></div>
     {error && <p role="alert" className="mt-6 text-destructive">{error}</p>}
     {!data && !error && <p className="mt-6 text-muted-foreground">Načítání…</p>}
     {data && <>
@@ -33,7 +34,7 @@ function Tracking() {
       <p className="mt-3 text-muted-foreground">{data.craftsman ? `Řemeslník: ${data.craftsman}` : "Hledáme dostupného řemeslníka ve vašem kraji. Příjezd zatím není potvrzen."}</p>
       {data.arrival_minutes && data.status !== "dokonceno" && <p className="mt-4 text-lg font-bold">Potvrzený odhad dojezdu při přijetí: {data.arrival_minutes} minut</p>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
-      <ol className="mt-8 divide-y divide-border">{Object.entries(STATUS_LABEL).map(([s,l]) => <li key={s} className={`py-3 ${s === data.status ? "font-bold text-primary" : "text-muted-foreground"}`}>{l}</li>)}</ol>
+      <ol className="mt-8 space-y-2 rounded-xl border border-border bg-card p-4">{Object.entries(STATUS_LABEL).map(([s,l], i, all) => { const cur = all.findIndex(([k]) => k === data.status); return <li key={s} className={cn("flex items-center gap-3 rounded-lg p-3", i === cur ? "bg-primary text-primary-foreground font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <Circle className="h-5 w-5 shrink-0" />}{l}</li>; })}</ol>
       <p className="mt-6 text-xs text-muted-foreground">Poslední změna: {new Date(data.updated_at).toLocaleString("cs-CZ")}</p>
     </>}
   </main><SiteFooter /></div>;

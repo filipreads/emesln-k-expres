@@ -98,7 +98,7 @@ function Dashboard() {
       <SiteHeader />
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-black">Concierge nástěnka</h1>
+          <h1 className="text-2xl font-black sm:text-3xl">Concierge nástěnka</h1>
           <div className="flex gap-2">
             <Button variant={tab === "req" ? "default" : "outline"} onClick={() => setTab("req")}>Poptávky</Button>
             <Button variant={tab === "crafts" ? "default" : "outline"} onClick={() => setTab("crafts")}>Řemeslníci ({data.craftsmen.length})</Button>
@@ -120,12 +120,12 @@ function Dashboard() {
           </div>
         )}
 
-        <form onSubmit={(e) => { e.preventDefault(); saveAvail(); }} className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-          <div className="font-bold">Dostupnost sítě v ČR</div>
-          <label className="text-sm">Volní mistři<Input type="number" min={0} value={avail.count} onChange={(e) => setAvail({ ...avail, count: e.target.value })} className="w-28" /></label>
-          <label className="text-sm">Odhad dojezdu (min)<Input type="number" min={10} value={avail.eta} onChange={(e) => setAvail({ ...avail, eta: e.target.value })} className="w-28" /></label>
-          <Button type="submit">Uložit</Button>
-          <p className="text-xs text-muted-foreground">Po 12 h bez aktualizace web ukáže „na dotaz“.</p>
+        <form onSubmit={(e) => { e.preventDefault(); saveAvail(); }} className="mt-6 grid grid-cols-2 items-end gap-3 rounded-xl border border-border bg-card p-4 sm:flex sm:flex-wrap">
+          <div className="col-span-2 font-bold sm:w-full">Dostupnost sítě v ČR</div>
+          <label className="text-sm">Volní mistři<Input type="number" min={0} value={avail.count} onChange={(e) => setAvail({ ...avail, count: e.target.value })} className="mt-1 w-full sm:w-28" /></label>
+          <label className="text-sm">Odhad dojezdu (min)<Input type="number" min={10} value={avail.eta} onChange={(e) => setAvail({ ...avail, eta: e.target.value })} className="mt-1 w-full sm:w-28" /></label>
+          <Button type="submit" className="col-span-2 sm:col-span-1">Uložit</Button>
+          <p className="col-span-2 text-xs text-muted-foreground">Po 12 h bez aktualizace web ukáže „na dotaz“.</p>
         </form>
 
         <form onSubmit={(e) => { e.preventDefault(); runAi(); }} className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
@@ -162,7 +162,7 @@ function Dashboard() {
               {data.requests.map((r) => (
                 <div key={r.id} className={cn("rounded-xl border bg-card p-5", r.urgency === "havarie" && r.status !== "dokonceno" ? "border-destructive" : "border-border")}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex gap-4">
+                    <div className="flex min-w-0 gap-4">
                       {r.photo_url && <a href={r.photo_url} target="_blank" rel="noreferrer"><img src={r.photo_url} alt="Fotka závady" className="h-20 w-20 rounded-md object-cover" /></a>}
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -176,11 +176,11 @@ function Dashboard() {
                         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{r.description}</p>
                         {r.ai_reason && <p className="mt-2 text-sm"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />{r.ai_reason}</p>}
                         {r.automation_note && <p className="mt-2 text-sm font-semibold text-destructive">{r.automation_note}</p>}
-                        <Link to="/objednavka" search={{ token: r.tracking_token }} className="mt-2 block text-sm text-primary">Sledování pro zákazníka</Link>
-                        <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary">{r.customer_name ? `${r.customer_name} · ` : ""}{r.phone}</a>
+                        <Link to="/objednavka" search={{ token: r.tracking_token }} className="mt-2 block text-sm font-semibold text-primary underline underline-offset-4">Sledování pro zákazníka</Link>
+                        <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary underline underline-offset-4">{r.customer_name ? `${r.customer_name} · ` : ""}{r.phone}</a>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
                       <Button size="sm" variant="outline" onClick={() => act(r.id, { broadcast: true })} disabled={r.status !== "nova" && r.status !== "oslovovani"}>
                         <Radio className="mr-1 h-4 w-4" /> Vytvořit nabídky
                       </Button>
@@ -192,7 +192,7 @@ function Dashboard() {
                       return (
                         <Button variant="ghost" size="sm" key={s} onClick={() => act(r.id, { status: s })}
                           className={cn("rounded-full px-3 py-1 text-xs font-semibold transition",
-                            i < cur ? "bg-primary/20 text-foreground" : i === cur ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent")}>
+                            i < cur ? "bg-secondary text-secondary-foreground" : i === cur ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent")}>
                           {STATUS_LABEL[s]}
                         </Button>
                       );
@@ -212,7 +212,7 @@ function Dashboard() {
                   <a href={`tel:${c.phone}`} className="font-semibold text-primary">{c.phone}</a>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: e.target.checked, available: c.available } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Ověřený</label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.available} disabled={!c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: c.approved, available: e.target.checked } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Volný</label>
-                  {c.approved && <Link to="/mistr" search={{ token: c.portal_token }} className="text-sm font-semibold text-primary">Soukromý přehled</Link>}
+                  {c.approved && <Link to="/mistr" search={{ token: c.portal_token }} className="text-sm font-semibold text-primary underline underline-offset-4">Soukromý přehled</Link>}
                 </div>
               </div>
             ))}
