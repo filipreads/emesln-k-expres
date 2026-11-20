@@ -7,6 +7,25 @@ export const TRADE_INFO = {
 export type Trade = keyof typeof TRADE_INFO;
 export const CALLOUT_FEE = 690;
 
+export type Urgency = "havarie" | "dnes" | "planovano";
+export const URGENCY_LABEL: Record<Urgency, string> = { havarie: "Havárie – ihned", dnes: "Drobná oprava dnes", planovano: "Plánovaný termín" };
+export const urgencyLabel = (u: string) => URGENCY_LABEL[u as Urgency] ?? u;
+
+/** Orientační cena: výjezd s diagnostikou + 1 až 2 hodiny práce podle oboru. */
+export function estimatePrice(trade: Trade) {
+  const rate = TRADE_INFO[trade].rate;
+  return { low: CALLOUT_FEE + rate, high: CALLOUT_FEE + 2 * rate };
+}
+
+/** Příběh zakázky – co se právě děje, lidskými slovy. */
+export const STATUS_STORY = {
+  nova: "Vaši poptávku jsme přijali a čteme, co se stalo.",
+  oslovovani: "Oslovujeme ověřené mistry ve vašem kraji.",
+  prijato: "Mistr zakázku přijal a chystá se k vám.",
+  na_ceste: "Mistr už jede. Připravte prosím přístup k závadě.",
+  dokonceno: "Hotovo. Děkujeme, že jste nám dali důvěru.",
+} as const;
+
 /** Řemesla výstavně presented in the hero section (elektro zůstává v objednávkovém formuláři). */
 export const HERO_TRADES: Trade[] = ["voda", "zamecnik", "manzel"];
 

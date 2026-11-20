@@ -217,6 +217,7 @@ export type Database = {
           phone: string
           photo_path: string | null
           postal_code: string | null
+          preferred_time: string | null
           region: string | null
           status: Database["public"]["Enums"]["request_status"]
           tracking_token: string
@@ -241,6 +242,7 @@ export type Database = {
           phone: string
           photo_path?: string | null
           postal_code?: string | null
+          preferred_time?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           tracking_token?: string
@@ -265,6 +267,7 @@ export type Database = {
           phone?: string
           photo_path?: string | null
           postal_code?: string | null
+          preferred_time?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           tracking_token?: string

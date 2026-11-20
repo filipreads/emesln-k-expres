@@ -11,7 +11,8 @@ const phone = z
   .regex(/^(\+420)?\s?\d{3}\s?\d{3}\s?\d{3}$/, "Zadejte platné české telefonní číslo");
 
 const requestSchema = z.object({
-  urgency: z.enum(["havarie", "dnes"]),
+  urgency: z.enum(["havarie", "dnes", "planovano"]),
+  preferred_time: z.string().datetime({ offset: true }).optional().transform((v) => v || null),
   trade: z.enum(TRADES),
   address: z.string().trim().min(3).max(200),
   district: z.string().trim().min(2).max(100),
@@ -41,8 +42,8 @@ export const submitRequest = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
-    const parsed = requestSchema.parse(Object.fromEntries(
-      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code", "customer_name"].map((k) => [k, data.get(k) ?? undefined]),
+    const parsed = requestSchema.refine((r) => r.urgency !== "planovano" || !!r.preferred_time, "Vyberte termín návštěvy").parse(Object.fromEntries(
+      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code", "customer_name", "preferred_time"].map((k) => [k, data.get(k) ?? undefined]),
     ));
     const db = await admin();
     let photo_path: string | null = null;
@@ -70,7 +71,7 @@ export const submitRequest = createServerFn({ method: "POST" })
         image = signed.signedUrl;
       }
       const ai = await analyze(parsed.description, image);
-      const { error: ae } = await db.from("service_requests").update({ trade: ai.trade, urgency: parsed.urgency === "havarie" ? "havarie" : ai.urgency, ai_reason: ai.reason, automation_note: ai.review ? "AI doporučuje kontrolu dispečerem. " + ai.reason : null }).eq("id", row.id);
+      const { error: ae } = await db.from("service_requests").update({ trade: ai.trade, urgency: parsed.urgency === "dnes" ? ai.urgency : parsed.urgency, ai_reason: ai.reason, automation_note: ai.review ? "AI doporučuje kontrolu dispečerem. " + ai.reason : null }).eq("id", row.id);
       if (ae) throw new Error("Uložení rozboru selhalo");
       if (!ai.review) await createOffers(row.id);
     } catch (e) {

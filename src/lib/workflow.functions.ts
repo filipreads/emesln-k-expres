@@ -6,12 +6,12 @@ const tokenSchema = z.object({ token: z.string().uuid() });
 
 export const trackOrder = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const { data: r, error } = await db.from("service_requests").select("id,status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at").eq("tracking_token", data.token).single();
+  const { data: r, error } = await db.from("service_requests").select("id,status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at,preferred_time").eq("tracking_token", data.token).single();
   if (error || !r) throw new Error("Objednávka nenalezena");
-  let name: string | null = null;
-  if (r.assigned_craftsman_id) { const { data: c } = await db.from("craftsman_applications").select("name").eq("id", r.assigned_craftsman_id).single(); name = c?.name ?? null; }
+  let name: string | null = null; let craftsmanPhone: string | null = null;
+  if (r.assigned_craftsman_id) { const { data: c } = await db.from("craftsman_applications").select("name,phone").eq("id", r.assigned_craftsman_id).single(); name = c?.name ?? null; if (r.status === "prijato" || r.status === "na_ceste") craftsmanPhone = c?.phone ?? null; }
   const { data: rated } = await db.from("ratings").select("id").eq("request_id", r.id).eq("direction", "customer_to_craftsman").maybeSingle();
-  return { rated: !!rated, status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, craftsman: name };
+  return { rated: !!rated, status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, preferred_time: r.preferred_time, craftsman: name, craftsman_phone: craftsmanPhone };
 });
 
 export const craftsmanPortal = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {

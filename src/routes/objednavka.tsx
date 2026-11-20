@@ -1,12 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { RefreshCw, CheckCircle2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle2, Circle, Phone, Bell, CalendarClock } from "lucide-react";
 import { RatingForm } from "@/components/RatingForm";
 import { trackOrder, rateCraftsman } from "@/lib/workflow.functions";
-import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
+import { STATUS_LABEL, STATUS_STORY, TRADE_INFO, urgencyLabel, type Trade } from "@/lib/content";
+import { readOrders, rememberOrder, type RecentOrder } from "@/lib/recent-orders";
+import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/objednavka")({
@@ -15,27 +18,92 @@ export const Route = createFileRoute("/objednavka")({
   component: Tracking,
 });
 
+type Order = Awaited<ReturnType<typeof trackOrder>>;
+
+function chime() {
+  try {
+    const ctx = new AudioContext(); const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.frequency.setValueAtTime(880, ctx.currentTime); o.frequency.setValueAtTime(1320, ctx.currentTime + 0.15);
+    g.gain.setValueAtTime(0.15, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.5);
+    navigator.vibrate?.(200);
+  } catch { /* ignore */ }
+}
+
+function Countdown({ from, minutes }: { from: string; minutes: number }) {
+  const target = new Date(from).getTime() + minutes * 60000;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
+  const left = Math.round((target - now) / 60000);
+  return <p className="mt-4 text-lg font-bold">{left > 0 ? `Mistr dorazí přibližně za ${left} min` : "Mistr by měl dorazit každou chvíli"}</p>;
+}
+
 function Tracking() {
   const { token } = Route.useSearch();
-  const [data, setData] = useState<Awaited<ReturnType<typeof trackOrder>> | null>(null);
+  const [data, setData] = useState<Order | null>(null);
   const [error, setError] = useState("");
+  const [recent, setRecent] = useState<RecentOrder[]>([]);
+  const lastStatus = useRef<string | null>(null);
+  const valid = !!token && z.string().uuid().safeParse(token).success;
+
   const load = useCallback(async () => {
-    if (!token || !z.string().uuid().safeParse(token).success) { setError("Otevřete soukromý odkaz z potvrzení objednávky."); return; }
-    try { setData(await trackOrder({ data: { token } })); setError(""); }
-    catch (e) { setError(e instanceof Error ? e.message : "Načtení selhalo"); }
-  }, [token]);
-  useEffect(() => { load(); const interval = setInterval(load, 15000); return () => clearInterval(interval); }, [load]);
+    if (!valid) { setError("Otevřete soukromý odkaz z potvrzení objednávky."); return; }
+    try {
+      const r = await trackOrder({ data: { token: token! } });
+      if (lastStatus.current && lastStatus.current !== r.status) chime();
+      lastStatus.current = r.status;
+      setData(r); setError("");
+    } catch (e) { setError(e instanceof Error ? e.message : "Načtení selhalo"); }
+  }, [token, valid]);
+
+  useEffect(() => { setRecent(readOrders()); }, []);
+  useEffect(() => { if (valid && data) rememberOrder({ token: token!, id: "", trade: data.trade, at: data.updated_at, ...readOrders().find((o) => o.token === token) }); }, [valid, token, data]);
+
+  useEffect(() => {
+    load();
+    // Fallback poll in case the live channel drops; live updates arrive instantly.
+    const interval = setInterval(load, 60000);
+    if (!valid) return () => clearInterval(interval);
+    const ch = supabase.channel(`order:${token}`).on("broadcast", { event: "changed" }, () => { load(); }).subscribe();
+    const onFocus = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { clearInterval(interval); supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onFocus); };
+  }, [load, valid, token]);
+
+  const steps = Object.entries(STATUS_LABEL) as [keyof typeof STATUS_LABEL, string][];
+  const cur = data ? steps.findIndex(([k]) => k === data.status) : -1;
+
   return <div className="min-h-screen"><SiteHeader /><main className="mx-auto max-w-2xl px-4 py-12">
-    <div className="flex items-center justify-between gap-4"><h1 className="text-2xl font-black sm:text-3xl">Vaše objednávka</h1><Button variant="outline" size="icon" aria-label="Obnovit stav" onClick={load}><RefreshCw className="h-4 w-4" /></Button></div>
-    {error && <p role="alert" className="mt-6 text-destructive">{error}</p>}
-    {!data && !error && <p className="mt-6 text-muted-foreground">Načítání…</p>}
+    <div className="flex items-center justify-between gap-4"><h1 className="text-2xl font-black sm:text-3xl">Vaše objednávka</h1>{valid && <Button variant="outline" size="icon" aria-label="Obnovit stav" onClick={load}><RefreshCw className="h-4 w-4" /></Button>}</div>
+
+    {!valid && <div className="mt-6 space-y-4">
+      <p className="text-muted-foreground">Otevřete soukromý odkaz z potvrzení objednávky{recent.length ? ", nebo vyberte objednávku z tohoto zařízení:" : "."}</p>
+      {recent.length > 0 && <ul className="space-y-2">{recent.map((o) => <li key={o.token}><Link to="/objednavka" search={{ token: o.token }} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 font-semibold hover:border-primary">
+        <span>{TRADE_INFO[o.trade as Trade]?.name ?? o.trade}{o.id ? ` · FM-${o.id.slice(0, 8).toUpperCase()}` : ""}</span>
+        <span className="text-sm font-normal text-muted-foreground">{new Date(o.at).toLocaleDateString("cs-CZ")}</span></Link></li>)}</ul>}
+    </div>}
+
+    {valid && error && <p role="alert" className="mt-6 text-destructive">{error}</p>}
+    {valid && !data && !error && <div className="mt-8 space-y-3" aria-label="Načítání"><div className="h-5 w-32 animate-pulse rounded bg-muted" /><div className="h-8 w-64 animate-pulse rounded bg-muted" /><div className="h-48 animate-pulse rounded-xl bg-muted" /></div>}
+
     {data && <>
-      <p className="mt-8 text-sm font-semibold text-primary">{TRADE_INFO[data.trade as Trade]?.name ?? data.trade}</p>
-      <h2 className="mt-2 text-2xl font-bold">{STATUS_LABEL[data.status]}</h2>
-      <p className="mt-3 text-muted-foreground">{data.craftsman ? `Řemeslník: ${data.craftsman}` : "Hledáme dostupného řemeslníka ve vašem kraji. Příjezd zatím není potvrzen."}</p>
-      {data.arrival_minutes && data.status !== "dokonceno" && <p className="mt-4 text-lg font-bold">Potvrzený odhad dojezdu při přijetí: {data.arrival_minutes} minut</p>}
+      <div className="mt-8 flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-primary">{TRADE_INFO[data.trade as Trade]?.name ?? data.trade}</span><Badge variant={data.urgency === "havarie" ? "destructive" : "secondary"}>{urgencyLabel(data.urgency)}</Badge></div>
+      <h2 className="mt-2 text-2xl font-bold" aria-live="polite">{STATUS_LABEL[data.status]}</h2>
+      <p className="mt-3 text-lg">{STATUS_STORY[data.status]}</p>
+      {data.craftsman && <p className="mt-2 text-muted-foreground">Váš mistr: <span className="font-semibold text-foreground">{data.craftsman}</span></p>}
+      {data.preferred_time && data.status !== "dokonceno" && <p className="mt-3 flex items-center gap-2 font-semibold"><CalendarClock className="h-5 w-5 text-primary" />Požadovaný termín: {new Date(data.preferred_time).toLocaleString("cs-CZ", { dateStyle: "medium", timeStyle: "short" })}</p>}
+      {data.arrival_minutes && data.status === "prijato" && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
+      {data.craftsman_phone && <Button asChild size="lg" className="mt-5 w-full sm:w-auto"><a href={`tel:${data.craftsman_phone.replace(/\s/g, "")}`}><Phone className="h-5 w-5" />Zavolat mistrovi</a></Button>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
-      <ol className="mt-8 space-y-2 rounded-xl border border-border bg-card p-4">{Object.entries(STATUS_LABEL).map(([s,l], i, all) => { const cur = all.findIndex(([k]) => k === data.status); return <li key={s} className={cn("flex items-center gap-3 rounded-lg p-3", i === cur ? "bg-primary text-primary-foreground font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <Circle className="h-5 w-5 shrink-0" />}{l}</li>; })}</ol>
+
+      <ol className="mt-8 rounded-xl border border-border bg-card p-4">{steps.map(([s, l], i) => <li key={s} className="relative flex gap-3 pb-4 last:pb-0">
+        {i < steps.length - 1 && <span aria-hidden className={cn("absolute left-3 top-7 bottom-0 w-px", i < cur ? "bg-primary" : "bg-border")} />}
+        <span className={cn("relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full", i === cur ? "bg-primary text-primary-foreground" : i < cur ? "text-primary" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-6 w-6" /> : <Circle className={cn("h-4 w-4", i === cur && "animate-pulse fill-current")} />}</span>
+        <div className={cn(i === cur ? "font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{l}{i === cur && <p className="text-sm font-normal text-muted-foreground">{STATUS_STORY[s]}</p>}</div>
+      </li>)}</ol>
+
+      {data.status !== "dokonceno" && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Bell className="h-4 w-4" />Stránka se aktualizuje sama a při změně krátce zazvoní.</p>}
+
       {data.status === "dokonceno" && <div className="mt-8">{data.rated ? <p className="rounded-xl border border-border bg-card p-5 font-semibold">Děkujeme, vaše hodnocení jsme dostali.</p> : <RatingForm title={`Jak jste byli spokojeni${data.craftsman ? ` s mistrem ${data.craftsman}` : ""}?`} allowPublic onSubmit={async v => { await rateCraftsman({ data: { token: token!, ...v } }); await load(); }} />}</div>}
       <p className="mt-6 text-xs text-muted-foreground">Poslední změna: {new Date(data.updated_at).toLocaleString("cs-CZ")}</p>
     </>}

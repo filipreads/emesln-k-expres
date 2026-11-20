@@ -43,6 +43,13 @@
       "when": 1795120585605,
       "tag": "0005_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795134860818,
+      "tag": "0006_order_timing_and_live_updates",
+      "breakpoints": true
     }
   ]
 }

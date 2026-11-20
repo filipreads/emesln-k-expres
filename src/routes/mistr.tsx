@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { RatingForm } from "@/components/RatingForm";
 import { craftsmanPortal, acceptOffer, progressJob, rateCustomer, myRatings } from "@/lib/workflow.functions";
-import { STATUS_LABEL } from "@/lib/content";
+import { STATUS_LABEL, urgencyLabel } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +40,7 @@ function Portal() {
       <h2 className="mt-8 text-xl font-bold">Nabídky</h2>
       {!data.offers.length && <p className="mt-3 text-muted-foreground">Zatím žádné nabídky.</p>}
       <div className="mt-4 space-y-4">{data.offers.map(o => <form key={o.id} className="space-y-3 rounded-lg border border-border bg-card p-5" onSubmit={e => { e.preventDefault(); if (token) act(() => acceptOffer({ data: { token, offer: o.id, minutes: Number(minutes[o.id] ?? "60") } })); }}>
-        <h3 className="font-bold">{o.service_requests?.city} · {o.service_requests?.urgency === "havarie" ? "Havárie" : "Oprava dnes"}</h3><p className="text-sm">{o.service_requests?.description}</p>
+        <h3 className="font-bold">{o.service_requests?.city} · {urgencyLabel(o.service_requests?.urgency ?? "")}</h3><p className="text-sm">{o.service_requests?.description}</p>
         <label className="block text-sm">Odhad dojezdu v minutách<Input type="number" required min={10} max={600} value={minutes[o.id] ?? "60"} onChange={e => setMinutes({ ...minutes, [o.id]: e.target.value })} className="mt-1 max-w-40" /></label>
         <Button type="submit" className="w-full sm:w-auto" disabled={busy || !data.craftsman.available}>Přijmout zakázku</Button>
       </form>)}</div>

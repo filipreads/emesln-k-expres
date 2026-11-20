@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { CheckCircle2, Siren, Wrench, MapPin, LocateFixed, Camera, X, ArrowLeft, ArrowRight } from "lucide-react";
+import { CheckCircle2, Siren, Wrench, CalendarClock, MapPin, LocateFixed, Camera, X, ArrowLeft, ArrowRight } from "lucide-react";
 import { submitRequest } from "@/lib/api.functions";
 import { suggestAddress, reverseAddress, type AddressSuggestion } from "@/lib/address.functions";
-import { TRADE_INFO, SERVICE_ORDER, CALLOUT_FEE, type Trade } from "@/lib/content";
+import { TRADE_INFO, SERVICE_ORDER, CALLOUT_FEE, URGENCY_LABEL, estimatePrice, type Trade, type Urgency } from "@/lib/content";
+import { rememberOrder } from "@/lib/recent-orders";
 import { REGIONS, type Region } from "@/lib/regions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,11 @@ import { cn } from "@/lib/utils";
 export type Preset = { trade: Trade; issue?: string | undefined; nonce: number };
 
 type Draft = {
-  urgency: "havarie" | "dnes"; trade: Trade; description: string;
+  urgency: Urgency; when: string; trade: Trade; description: string;
   place: string; address: string; postal: string; city: string; region: Region;
   phone: string; name: string;
 };
-const EMPTY: Draft = { urgency: "havarie", trade: "voda", description: "", place: "", address: "", postal: "", city: "", region: "Praha", phone: "", name: "" };
+const EMPTY: Draft = { urgency: "havarie", when: "", trade: "voda", description: "", place: "", address: "", postal: "", city: "", region: "Praha", phone: "", name: "" };
 const KEY = "fofr-draft-v1";
 const STEPS = ["Závada", "Lokalita", "Kontakt"];
 
@@ -135,11 +136,11 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
 
   const city = d.city || d.place.replace(/^\d{3}\s?\d{2}\s*/, "");
   const valid = [
-    d.description.trim().length >= 5,
+    d.description.trim().length >= 5 && (d.urgency !== "planovano" || (!!d.when && new Date(d.when).getTime() > Date.now())),
     d.address.trim().length >= 3 && city.trim().length >= 2,
     /^(\+420)?\s?\d{3}\s?\d{3}\s?\d{3}$/.test(d.phone.trim()),
   ];
-  const hints = ["Popište prosím závadu (aspoň pár slov).", "Doplňte město a adresu.", "Zadejte telefon ve tvaru 777 123 456."];
+  const hints = [d.urgency === "planovano" && !(d.when && new Date(d.when).getTime() > Date.now()) ? "Vyberte budoucí termín návštěvy." : "Popište prosím závadu (aspoň pár slov).", "Doplňte město a adresu.", "Zadejte telefon ve tvaru 777 123 456."];
 
   function next() { if (!valid[step]) { toast.error(hints[step]); return; } setStep((s) => s + 1); }
 
@@ -148,12 +149,14 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
     const fd = new FormData();
     fd.set("urgency", d.urgency); fd.set("trade", d.trade); fd.set("description", d.description.trim());
     fd.set("address", d.address); fd.set("district", city.trim()); fd.set("region", d.region);
+    if (d.urgency === "planovano" && d.when) fd.set("preferred_time", new Date(d.when).toISOString());
     fd.set("phone", d.phone); fd.set("customer_name", d.name);
     if (/^\d{3}\s?\d{2}$/.test(d.postal.trim())) fd.set("postal_code", d.postal.trim());
     if (photo) fd.set("photo", photo);
     setBusy(true);
     try {
       const r = await submitRequest({ data: fd });
+      rememberOrder({ token: r.token, id: r.id, trade: d.trade, at: new Date().toISOString() });
       setDone({ token: r.token, id: r.id, snap: { ...d, city } });
       localStorage.removeItem(KEY); setD(EMPTY); setStep(0); setPhoto(null); setPreview("");
     } catch (e) {
@@ -171,7 +174,7 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
         <p className="font-display text-3xl font-black tracking-wider text-primary">FM-{done.id.slice(0, 8).toUpperCase()}</p>
         <dl className="mx-auto mt-6 max-w-sm space-y-2 rounded-xl bg-muted p-4 text-left text-sm">
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Obor</dt><dd className="font-semibold">{TRADE_INFO[s.trade].name}</dd></div>
-          <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Naléhavost</dt><dd className="font-semibold">{s.urgency === "havarie" ? "Havárie – ihned" : "Oprava dnes"}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Naléhavost</dt><dd className="font-semibold">{URGENCY_LABEL[s.urgency]}{s.urgency === "planovano" && s.when ? ` · ${new Date(s.when).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}` : ""}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Adresa</dt><dd className="text-right font-semibold">{s.address}, {s.city}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Telefon</dt><dd className="font-semibold">{s.phone}</dd></div>
         </dl>
@@ -198,14 +201,26 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
       <div className="mt-6 space-y-5">
         {step === 0 && (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              {([["havarie", "Havárie – ihned", Siren], ["dnes", "Drobná oprava dnes", Wrench]] as const).map(([v, l, Icon]) => (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([["havarie", URGENCY_LABEL.havarie, Siren], ["dnes", URGENCY_LABEL.dnes, Wrench], ["planovano", URGENCY_LABEL.planovano, CalendarClock]] as const).map(([v, l, Icon]) => (
                 <Button variant="outline" type="button" key={v} onClick={() => set("urgency", v)} aria-pressed={d.urgency === v}
                   className={cn("h-auto min-h-14 whitespace-normal justify-start gap-2 border-2 p-3 text-left text-base font-semibold",
                     d.urgency === v ? "border-primary bg-accent" : "border-border")}>
                   <Icon className="h-5 w-5 shrink-0 text-primary" /> {l}
                 </Button>
               ))}
+            </div>
+            {d.urgency === "planovano" && (
+              <div>
+                <Label htmlFor="w-when">Kdy se vám to hodí?</Label>
+                <Input id="w-when" type="datetime-local" value={d.when} onChange={(e) => set("when", e.target.value)} className="mt-1 h-12 text-base" />
+                <p className="mt-1 text-sm text-muted-foreground">Termín vám dispečink potvrdí telefonem.</p>
+              </div>
+            )}
+            <div className="rounded-xl bg-muted p-4 text-sm" aria-live="polite">
+              <div className="font-semibold">Orientační cena za {TRADE_INFO[d.trade].name.toLowerCase()}</div>
+              <div className="mt-1 text-lg font-bold">cca {estimatePrice(d.trade).low.toLocaleString("cs-CZ")} – {estimatePrice(d.trade).high.toLocaleString("cs-CZ")} Kč</div>
+              <p className="mt-1 text-muted-foreground">Výjezd {CALLOUT_FEE} Kč s diagnostikou a 1–2 hodiny práce. Přesnou cenu řekne mistr před opravou.</p>
             </div>
             <div>
               <Label>Obor</Label>
@@ -291,7 +306,7 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
             <div className="rounded-xl bg-muted p-4 text-sm">
               <div className="font-bold">Shrnutí</div>
               <ul className="mt-2 space-y-1">
-                <li>{TRADE_INFO[d.trade].name} · {d.urgency === "havarie" ? "Havárie – ihned" : "Oprava dnes"}</li>
+                <li>{TRADE_INFO[d.trade].name} · {URGENCY_LABEL[d.urgency]}{d.urgency === "planovano" && d.when ? ` · ${new Date(d.when).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}` : ""}</li>
                 <li className="text-muted-foreground">{d.description}</li>
                 <li>{d.address}, {city} · {d.region}</li>
                 {photo && <li>Fotka přiložena</li>}

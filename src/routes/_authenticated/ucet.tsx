@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
+import { STATUS_LABEL, TRADE_INFO, type Trade, urgencyLabel } from "@/lib/content";
 import { LEVEL_SIZE, type computeGame } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
 
@@ -156,7 +156,7 @@ function Account() {
                         <p className="mt-4 flex items-start gap-2 text-sm"><MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 break-words">{o.address}<br />{[o.postal_code, o.city || o.district].filter(Boolean).join(" ")}{o.region && <span className="block text-muted-foreground">{o.region}</span>}</span></p>
                         <p className="mt-4 whitespace-pre-wrap break-words text-sm">{o.description}</p>
                         <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
-                          <div><dt className="text-muted-foreground">Naléhavost</dt><dd className={o.urgency === "havarie" ? "font-semibold text-destructive" : "font-semibold"}>{o.urgency === "havarie" ? "Havárie – ihned" : "Drobná oprava – dnes"}</dd></div>
+                          <div><dt className="text-muted-foreground">Naléhavost</dt><dd className={o.urgency === "havarie" ? "font-semibold text-destructive" : "font-semibold"}>{urgencyLabel(o.urgency ?? "")}</dd></div>
                           <div><dt className="text-muted-foreground">Kontaktní telefon</dt><dd className="font-semibold">{o.phone}</dd></div>
                           {o.arrival_minutes != null && o.status !== "dokonceno" && <div className="sm:col-span-2"><dt className="flex items-center gap-1 text-muted-foreground"><Clock3 className="h-4 w-4" />Odhad dojezdu při přijetí</dt><dd className="font-semibold">{o.arrival_minutes} minut</dd></div>}
                         </dl>

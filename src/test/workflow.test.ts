@@ -25,3 +25,8 @@ describe("Nationwide dispatch", () => {
     expect(canProgress("dokonceno", "na_ceste")).toBe(false);
   });
 });
+import { estimatePrice } from "@/lib/content";
+describe("price estimate", () => {
+  it("voda = výjezd 690 + 1–2 h po 790", () => { expect(estimatePrice("voda")).toEqual({ low: 1480, high: 2270 }); });
+  it("zámečník = 690 + 1–2 h po 950", () => { expect(estimatePrice("zamecnik")).toEqual({ low: 1640, high: 2590 }); });
+});
