@@ -10,3 +10,6 @@
 - [x] Patička: odstranit seznam krajů ČR.
 - [x] Úvodní stránka: odebrat sekci ukázkových výjezdů.
 - [x] Účty: přehled a čísla nahoře, hezčí odznaky a úrovně, lepší prázdné stavy, rozdělit sekce zákazník / řemeslník.
+- [x] Sledování objednávky: příběhová osa, odpočet příjezdu, zavolat mistrovi, zvuk při změně.
+- [x] Okamžité aktualizace stavu a seznam objednávek z tohoto zařízení.
+- [x] Formulář: plánovaný termín a orientační cena.

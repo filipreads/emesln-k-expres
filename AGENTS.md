@@ -40,3 +40,5 @@ use the editor.
 - Home order form is a 3-step wizard (src/components/OrderWizard.tsx) with a localStorage draft and client-side photo compression; it still posts FormData to submitRequest. Callback requests go to a service-role-only callback_requests table shown on /dispecink. Why: faster ordering without changing the server workflow.
 
 - Theme comes from the attached design system: its fluxora.css is imported in layer(base) and its :root palette is mirrored in src/styles.css, because its styles.css cannot be layered (nested tw-animate @utility) and unlayered resets would override Tailwind utilities.
+
+- Order tracking refreshes via a data-free realtime broadcast on topic `order:<tracking_token>` sent by a DB trigger, with a slow poll fallback. Why: instant updates without exposing order rows to the browser.
