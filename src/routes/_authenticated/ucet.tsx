@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { STATUS_LABEL, TRADE_INFO, type Trade, urgencyLabel } from "@/lib/content";
+import { STATUS_LABEL, TRADE_INFO, type Trade, urgencyLabel, formatPreferredTime } from "@/lib/content";
 import { LEVEL_SIZE, type computeGame } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
 
@@ -157,8 +157,9 @@ function Account() {
                         <p className="mt-4 whitespace-pre-wrap break-words text-sm">{o.description}</p>
                         <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
                           <div><dt className="text-muted-foreground">Naléhavost</dt><dd className={o.urgency === "havarie" ? "font-semibold text-destructive" : "font-semibold"}>{urgencyLabel(o.urgency ?? "")}</dd></div>
+                          {o.urgency === "planovano" && o.status !== "dokonceno" && <div><dt className="text-muted-foreground">Požadovaný termín</dt><dd className="font-semibold">{o.preferred_time ? <time dateTime={o.preferred_time}>{formatPreferredTime(o.preferred_time)}</time> : "Neuveden – ověřte s dispečinkem"}</dd></div>}
                           <div><dt className="text-muted-foreground">Kontaktní telefon</dt><dd className="font-semibold">{o.phone}</dd></div>
-                          {o.arrival_minutes != null && o.status !== "dokonceno" && <div className="sm:col-span-2"><dt className="flex items-center gap-1 text-muted-foreground"><Clock3 className="h-4 w-4" />Odhad dojezdu při přijetí</dt><dd className="font-semibold">{o.arrival_minutes} minut</dd></div>}
+                          {o.arrival_minutes != null && o.urgency !== "planovano" && o.status !== "dokonceno" && <div className="sm:col-span-2"><dt className="flex items-center gap-1 text-muted-foreground"><Clock3 className="h-4 w-4" />Odhad dojezdu při přijetí</dt><dd className="font-semibold">{o.arrival_minutes} minut</dd></div>}
                         </dl>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                           <p className="text-xs text-muted-foreground">Poslední změna: {formatDate(o.updated_at)}</p>

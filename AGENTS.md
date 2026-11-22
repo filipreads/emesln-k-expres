@@ -43,4 +43,5 @@ use the editor.
 
 - Order tracking refreshes via a data-free realtime broadcast on topic `order:<tracking_token>` sent by a DB trigger, with a slow poll fallback. Why: instant updates without exposing order rows to the browser.
 - Homepage availability uses the shared freshness helper and rechecks time while open; dispatcher reads remain raw. Why: expire public availability claims without hiding the operator's saved settings.
-- Scheduled visit dates in dispatcher and craftsman views use the shared Czech formatter with Europe/Prague timezone. Why: show the same requested local slot regardless of the operator's device timezone.
+- Saved scheduled visit dates in dispatcher, craftsman, account and tracking views use the shared Czech formatter with Europe/Prague timezone. Why: show the same requested local slot regardless of the viewer's device timezone.
+- Immediate arrival countdowns exclude scheduled jobs even after acceptance. Why: accepting a future visit does not promise arrival within the travel-time estimate.

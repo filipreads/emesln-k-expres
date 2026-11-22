@@ -178,7 +178,7 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Adresa</dt><dd className="text-right font-semibold">{s.address}, {s.city}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Telefon</dt><dd className="font-semibold">{s.phone}</dd></div>
         </dl>
-        <p className="mt-4 text-sm text-muted-foreground">Dispečink teď hledá nejbližšího volného mistra. Čas příjezdu potvrdí řemeslník při přijetí.</p>
+        <p className="mt-4 text-sm text-muted-foreground">{s.urgency === "planovano" ? "Dispečink hledá mistra pro váš požadovaný termín a potvrdí vám ho telefonem." : "Dispečink teď hledá nejbližšího volného mistra. Čas příjezdu potvrdí řemeslník při přijetí."}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button asChild size="lg"><Link to="/objednavka" search={{ token: done.token }}>Sledovat objednávku</Link></Button>
           <Button size="lg" variant="outline" onClick={() => setDone(null)}>Nový požadavek</Button>

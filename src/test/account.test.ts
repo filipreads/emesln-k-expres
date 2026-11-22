@@ -57,4 +57,10 @@ describe("Customer order overview", () => {
     mocks.error = { message: "Unavailable" };
     await expect(runAccount({ context })).rejects.toThrow("Objednávky se nepodařilo načíst");
   });
+
+  it("includes the requested scheduled slot in the owner's order projection", async () => {
+    await runAccount({ context });
+    const projection = mocks.select.mock.calls.find(([table]) => table === "service_requests")?.[1].split(",");
+    expect(projection).toContain("preferred_time");
+  });
 });

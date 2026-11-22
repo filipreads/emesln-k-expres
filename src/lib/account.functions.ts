@@ -7,7 +7,7 @@ export const getMyAccount = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { data: profile } = await context.supabase.from("profiles").select("display_name").eq("id", context.userId).maybeSingle();
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-    const { data: orders, error: ordersError } = await db.from("service_requests").select("id,trade,status,urgency,address,district,city,postal_code,region,description,phone,created_at,updated_at,arrival_minutes,tracking_token").eq("customer_user_id", context.userId).order("created_at", { ascending: false }).limit(100);
+    const { data: orders, error: ordersError } = await db.from("service_requests").select("id,trade,status,urgency,preferred_time,address,district,city,postal_code,region,description,phone,created_at,updated_at,arrival_minutes,tracking_token").eq("customer_user_id", context.userId).order("created_at", { ascending: false }).limit(100);
     if (ordersError) throw new Error("Objednávky se nepodařilo načíst. Zkuste to prosím znovu.");
     const { data: crafts } = await db.from("craftsman_applications").select("id,name,trade,approved,portal_token").eq("user_id", context.userId).limit(5);
     const craft = crafts?.[0] ?? null;

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { RefreshCw, CheckCircle2, Circle, Phone, Bell, CalendarClock } from "lucide-react";
 import { RatingForm } from "@/components/RatingForm";
 import { trackOrder, rateCraftsman } from "@/lib/workflow.functions";
-import { STATUS_LABEL, STATUS_STORY, TRADE_INFO, urgencyLabel, type Trade } from "@/lib/content";
+import { STATUS_LABEL, STATUS_STORY, TRADE_INFO, urgencyLabel, formatPreferredTime, shouldShowArrivalCountdown, type Trade } from "@/lib/content";
 import { readOrders, rememberOrder, type RecentOrder } from "@/lib/recent-orders";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
@@ -72,6 +72,9 @@ function Tracking() {
 
   const steps = Object.entries(STATUS_LABEL) as [keyof typeof STATUS_LABEL, string][];
   const cur = data ? steps.findIndex(([k]) => k === data.status) : -1;
+  const story = data?.urgency === "planovano" && data.status === "prijato"
+    ? "Mistr zakázku přijal. Požadovaný termín vám potvrdí dispečink."
+    : data ? STATUS_STORY[data.status] : "";
 
   return <div className="min-h-screen"><SiteHeader /><main className="mx-auto max-w-2xl px-4 py-12">
     <div className="flex items-center justify-between gap-4"><h1 className="text-2xl font-black sm:text-3xl">Vaše objednávka</h1>{valid && <Button variant="outline" size="icon" aria-label="Obnovit stav" onClick={load}><RefreshCw className="h-4 w-4" /></Button>}</div>
@@ -89,17 +92,17 @@ function Tracking() {
     {data && <>
       <div className="mt-8 flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-primary">{TRADE_INFO[data.trade as Trade]?.name ?? data.trade}</span><Badge variant={data.urgency === "havarie" ? "destructive" : "secondary"}>{urgencyLabel(data.urgency)}</Badge></div>
       <h2 className="mt-2 text-2xl font-bold" aria-live="polite">{STATUS_LABEL[data.status]}</h2>
-      <p className="mt-3 text-lg">{STATUS_STORY[data.status]}</p>
+      <p className="mt-3 text-lg">{story}</p>
       {data.craftsman && <p className="mt-2 text-muted-foreground">Váš mistr: <span className="font-semibold text-foreground">{data.craftsman}</span></p>}
-      {data.preferred_time && data.status !== "dokonceno" && <p className="mt-3 flex items-center gap-2 font-semibold"><CalendarClock className="h-5 w-5 text-primary" />Požadovaný termín: {new Date(data.preferred_time).toLocaleString("cs-CZ", { dateStyle: "medium", timeStyle: "short" })}</p>}
-      {data.arrival_minutes && data.status === "prijato" && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
+      {data.urgency === "planovano" && data.status !== "dokonceno" && <p className="mt-3 flex items-start gap-2 font-semibold"><CalendarClock className="h-5 w-5 shrink-0 text-primary" /><span>Požadovaný termín: {data.preferred_time ? <time dateTime={data.preferred_time}>{formatPreferredTime(data.preferred_time)}</time> : "Neuveden – ověřte s dispečinkem"}</span></p>}
+      {shouldShowArrivalCountdown(data) && data.arrival_minutes !== null && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
       {data.craftsman_phone && <Button asChild size="lg" className="mt-5 w-full sm:w-auto"><a href={`tel:${data.craftsman_phone.replace(/\s/g, "")}`}><Phone className="h-5 w-5" />Zavolat mistrovi</a></Button>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
 
       <ol className="mt-8 rounded-xl border border-border bg-card p-4">{steps.map(([s, l], i) => <li key={s} className="relative flex gap-3 pb-4 last:pb-0">
         {i < steps.length - 1 && <span aria-hidden className={cn("absolute left-3 top-7 bottom-0 w-px", i < cur ? "bg-primary" : "bg-border")} />}
         <span className={cn("relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full", i === cur ? "bg-primary text-primary-foreground" : i < cur ? "text-primary" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-6 w-6" /> : <Circle className={cn("h-4 w-4", i === cur && "animate-pulse fill-current")} />}</span>
-        <div className={cn(i === cur ? "font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{l}{i === cur && <p className="text-sm font-normal text-muted-foreground">{STATUS_STORY[s]}</p>}</div>
+        <div className={cn(i === cur ? "font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{l}{i === cur && <p className="text-sm font-normal text-muted-foreground">{story}</p>}</div>
       </li>)}</ol>
 
       {data.status !== "dokonceno" && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Bell className="h-4 w-4" />Stránka se aktualizuje sama a při změně krátce zazvoní.</p>}

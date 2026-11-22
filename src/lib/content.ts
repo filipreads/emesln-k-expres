@@ -17,6 +17,12 @@ export function formatPreferredTime(value: string) {
   });
 }
 
+/** Accepting a scheduled job does not mean travelling to the customer now. */
+export function shouldShowArrivalCountdown(order: { urgency: string; status: string; arrival_minutes: number | null }) {
+  return order.urgency !== "planovano" && order.status === "prijato"
+    && order.arrival_minutes !== null && order.arrival_minutes > 0;
+}
+
 /** Orientační cena: výjezd s diagnostikou + 1 až 2 hodiny práce podle oboru. */
 export function estimatePrice(trade: Trade) {
   const rate = TRADE_INFO[trade].rate;
