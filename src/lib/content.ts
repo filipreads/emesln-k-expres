@@ -11,6 +11,12 @@ export type Urgency = "havarie" | "dnes" | "planovano";
 export const URGENCY_LABEL: Record<Urgency, string> = { havarie: "Havárie – ihned", dnes: "Drobná oprava dnes", planovano: "Plánovaný termín" };
 export const urgencyLabel = (u: string) => URGENCY_LABEL[u as Urgency] ?? u;
 
+export function formatPreferredTime(value: string) {
+  return new Date(value).toLocaleString("cs-CZ", {
+    dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Prague",
+  });
+}
+
 /** Orientační cena: výjezd s diagnostikou + 1 až 2 hodiny práce podle oboru. */
 export function estimatePrice(trade: Trade) {
   const rate = TRADE_INFO[trade].rate;

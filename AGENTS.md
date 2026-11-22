@@ -42,3 +42,5 @@ use the editor.
 - Theme comes from the attached design system: its fluxora.css is imported in layer(base) and its :root palette is mirrored in src/styles.css, because its styles.css cannot be layered (nested tw-animate @utility) and unlayered resets would override Tailwind utilities.
 
 - Order tracking refreshes via a data-free realtime broadcast on topic `order:<tracking_token>` sent by a DB trigger, with a slow poll fallback. Why: instant updates without exposing order rows to the browser.
+- Homepage availability uses the shared freshness helper and rechecks time while open; dispatcher reads remain raw. Why: expire public availability claims without hiding the operator's saved settings.
+- Scheduled visit dates in dispatcher and craftsman views use the shared Czech formatter with Europe/Prague timezone. Why: show the same requested local slot regardless of the operator's device timezone.

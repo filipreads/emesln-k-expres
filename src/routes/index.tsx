@@ -12,6 +12,7 @@ import { TRADE_INFO, SERVICE_ORDER, QUICK_ISSUES, CALLOUT_FEE, FAQ, type Trade }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { availableCount } from "@/lib/availability";
 
 const TITLE = "Fofr Mistr – expresní instalatér, zámečník, elektrikář po celé ČR";
 const DESC = "Havárie vody, zabouchnuté dveře, vypadlý jistič i drobné opravy. Výjezd 690 Kč s diagnostikou, 0 Kč předem, platíte až po hotové práci.";
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/")({
       }) },
     ],
   }),
-  loader: async () => { const [av, rv] = await Promise.all([getAvailability(), publicReviews().catch(() => ({ reviews: [], count: 0, average: null }))]); return { ...av, rv }; },
+  loader: async () => { const [av, rv] = await Promise.all([getAvailability(), publicReviews().catch(() => ({ reviews: [], count: 0, average: null }))]); return { ...av, rv, checkedAt: Date.now() }; },
   component: Index,
 });
 
@@ -133,7 +134,15 @@ function HowItWorks() {
 
 function Index() {
   const a = Route.useLoaderData();
-  const count = a.available_count;
+  const [now, setNow] = useState(a.checkedAt);
+  useEffect(() => {
+    const refresh = () => setNow(Date.now());
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [a.checkedAt]);
+  const count = availableCount(a, now);
   const [preset, setPreset] = useState<Preset | undefined>();
   const [cb, setCb] = useState(false);
 
@@ -151,7 +160,7 @@ function Index() {
             <span className="relative flex h-2.5 w-2.5 shrink-0"><span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", count > 0 ? "bg-success" : "bg-primary")} /><span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", count > 0 ? "bg-success" : "bg-primary")} /></span>
             {count > 0
               ? <span>Online: {count} volných mistrů • Průměrný dojezd ~{a.eta_minutes} min</span>
-              : <span>Expresní prověření dostupnosti • Dispečink osloví nejbližšího mistra do 5 min (průměrný dojezd ~{a.eta_minutes} min)</span>}
+              : <span>Dostupnost na dotaz • Dispečink ověří volného mistra a potvrdí dojezd</span>}
           </div>
           <h1 className="mt-6 max-w-3xl text-4xl font-black leading-[1.1] md:text-6xl md:leading-[1.05]">
             Řemeslník nebo hodinový manžel u vás, <span className="text-primary">když to hoří.</span>

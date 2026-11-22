@@ -18,9 +18,9 @@ export const craftsmanPortal = createServerFn({ method: "POST" }).inputValidator
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: c, error } = await db.from("craftsman_applications").select("id,name,approved,available,region,trade").eq("portal_token", data.token).single();
   if (error || !c || !c.approved) throw new Error("Přístup není schválen nebo odkaz není platný");
-  const { data: offers, error: oe } = await db.from("job_offers").select("id,state,service_requests(id,city,region,description,trade,urgency,status,assigned_craftsman_id)").eq("craftsman_id", c.id).in("state", ["pending", "accepted"]).order("created_at", { ascending: false }).limit(50);
+  const { data: offers, error: oe } = await db.from("job_offers").select("id,state,service_requests(id,city,region,description,trade,urgency,preferred_time,status,assigned_craftsman_id)").eq("craftsman_id", c.id).in("state", ["pending", "accepted"]).order("created_at", { ascending: false }).limit(50);
   if (oe) throw new Error("Načtení nabídek selhalo");
-  const { data: jobs, error: je } = await db.from("service_requests").select("id,address,city,district,phone,status,arrival_minutes,description").eq("assigned_craftsman_id", c.id).order("created_at", { ascending: false }).limit(50);
+  const { data: jobs, error: je } = await db.from("service_requests").select("id,address,city,district,phone,status,arrival_minutes,description,urgency,preferred_time").eq("assigned_craftsman_id", c.id).order("created_at", { ascending: false }).limit(50);
   if (je) throw new Error("Načtení zakázek selhalo");
   return { craftsman: c, offers: (offers ?? []).filter(o => o.state === "pending" && o.service_requests && !o.service_requests.assigned_craftsman_id && ["nova", "oslovovani"].includes(o.service_requests.status)), jobs: jobs ?? [] };
 });

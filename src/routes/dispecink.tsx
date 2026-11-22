@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, RefreshCw, Siren, Sparkles } from "lucide-react";
 import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, markCallback, STATUSES } from "@/lib/api.functions";
-import { STATUS_LABEL, TRADE_INFO, type Trade } from "@/lib/content";
+import { STATUS_LABEL, TRADE_INFO, formatPreferredTime, type Trade } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,11 +168,12 @@ function Dashboard() {
                         <div className="flex flex-wrap items-center gap-2">
                           {r.urgency === "havarie"
                             ? <span className="inline-flex items-center gap-1 rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground"><Siren className="h-3 w-3" /> HAVÁRIE</span>
-                            : <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">DNES</span>}
+                             : <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{r.urgency === "planovano" ? "Plánovaný termín" : "DNES"}</span>}
                           <span className="font-bold">{TRADE_INFO[r.trade as Trade]?.name ?? r.trade}</span>
                           <span className="text-sm text-muted-foreground">· {new Date(r.created_at).toLocaleString("cs-CZ")}</span>
                         </div>
                         <div className="mt-1 font-semibold">{r.address}, {r.city ?? r.district} · {r.region ?? "Kraj neuveden"}</div>
+                         {r.urgency === "planovano" && <p className="mt-2 text-sm font-semibold">Požadovaný termín: {r.preferred_time ? <time dateTime={r.preferred_time}>{formatPreferredTime(r.preferred_time)}</time> : "Neuveden – ověřte se zákazníkem"}</p>}
                         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{r.description}</p>
                         {r.ai_reason && <p className="mt-2 text-sm"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />{r.ai_reason}</p>}
                         {r.automation_note && <p className="mt-2 text-sm font-semibold text-destructive">{r.automation_note}</p>}

@@ -1,4 +1,6 @@
 # Rozšíření služby
+- [x] Monitoring: zobrazit požadovaný termín dispečerům a řemeslníkům.
+- [x] Monitoring: skrýt dostupnost a odhad dojezdu starší než 12 hodin.
 - [x] Rozšířit zákaznický účet o stav, adresu a podrobnosti objednávek a ověřit přihlášený přehled.
 - [x] Objednávky a registrace pro všechny kraje ČR bez falešného dojezdu.
 - [x] AI rozbor popisu i fotografie s bezpečným ručním dořešením při chybě.
