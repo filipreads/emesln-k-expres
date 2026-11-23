@@ -1,4 +1,10 @@
 # Rozšíření služby
+- [ ] E-mail místo telefonů ve všech formulářích a přehledech; dotazy e-mailem.
+- [ ] Dispečink: filtry, automatické obnovení, přiřazení, poznámky, zrušení, statistiky.
+- [ ] Účet: profil, předvyplnění, zrušení nepřijaté zakázky.
+- [ ] Portál: dostupnost, historie, hodnocení a potvrzení dokončení.
+- [ ] Spolehlivost: bezpečné změny, historie, ochrana proti spamu, testy.
+- [ ] Automatické e-maily zákazníkům, mistrům a na Dirtparkborsov@gmail.com — čeká na vlastní odesílací doménu.
 - [x] Navazující kontrola: termín v zákaznickém účtu a jednotné zobrazení ve sledování.
 - [x] Navazující kontrola: plánované zakázky bez příslibu okamžitého příjezdu.
 - [x] Monitoring: zobrazit požadovaný termín dispečerům a řemeslníkům.
@@ -9,7 +15,7 @@
 - [x] Automatické nabídky ověřeným dostupným řemeslníkům, bezpečné přijetí, aktualizace stavu a sledování zákazníkem.
 - [x] Přepracovat hero sekci: texty, tři karty oborů, garance, kontrast a chování na mobilu.
 - [x] Redesign úvodní stránky: nová navigace, mobilní lišta, zpětné zavolání, 4 karty se štítky, scroll-telling, ceny, ukázky, 3krokový průvodce, FAQ, patička, strukturovaná data.
-- [ ] SMS oznámení (vyžaduje připojenou službu a odesílací číslo).
+- [x] SMS oznámení zrušena — služba komunikuje pouze e-mailem.
 - [x] Ověřit průběh a uložit změny.
 - [x] Patička: odstranit seznam krajů ČR.
 - [x] Úvodní stránka: odebrat sekci ukázkových výjezdů.

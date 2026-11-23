@@ -59,12 +59,40 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          handled: boolean
+          id: string
+          message: string
+          trade: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          handled?: boolean
+          id?: string
+          message: string
+          trade: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          handled?: boolean
+          id?: string
+          message?: string
+          trade?: string
+        }
+        Relationships: []
+      }
       craftsman_applications: {
         Row: {
           approved: boolean
           area: string
           available: boolean
           created_at: string
+          email: string | null
           id: string
           name: string
           phone: string
@@ -78,9 +106,10 @@ export type Database = {
           area: string
           available?: boolean
           created_at?: string
+          email?: string | null
           id?: string
           name: string
-          phone: string
+          phone?: string
           portal_token?: string
           region?: string | null
           trade: string
@@ -91,6 +120,7 @@ export type Database = {
           area?: string
           available?: boolean
           created_at?: string
+          email?: string | null
           id?: string
           name?: string
           phone?: string
@@ -98,6 +128,39 @@ export type Database = {
           region?: string | null
           trade?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      customer_profiles: {
+        Row: {
+          address: string | null
+          city: string | null
+          email_updates: boolean
+          name: string | null
+          postal_code: string | null
+          region: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          email_updates?: boolean
+          name?: string | null
+          postal_code?: string | null
+          region?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          email_updates?: boolean
+          name?: string | null
+          postal_code?: string | null
+          region?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -199,6 +262,38 @@ export type Database = {
           },
         ]
       }
+      request_events: {
+        Row: {
+          actor: string
+          created_at: string
+          event: string
+          id: string
+          request_id: string
+        }
+        Insert: {
+          actor?: string
+          created_at?: string
+          event: string
+          id?: string
+          request_id: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          event?: string
+          id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           address: string
@@ -207,12 +302,15 @@ export type Database = {
           assigned_craftsman_id: string | null
           automation_note: string | null
           broadcast_count: number
+          cancelled_at: string | null
           city: string | null
           created_at: string
           customer_name: string | null
           customer_user_id: string | null
           description: string
+          dispatcher_note: string | null
           district: string
+          email: string | null
           id: string
           phone: string
           photo_path: string | null
@@ -232,14 +330,17 @@ export type Database = {
           assigned_craftsman_id?: string | null
           automation_note?: string | null
           broadcast_count?: number
+          cancelled_at?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string | null
           customer_user_id?: string | null
           description: string
+          dispatcher_note?: string | null
           district: string
+          email?: string | null
           id?: string
-          phone: string
+          phone?: string
           photo_path?: string | null
           postal_code?: string | null
           preferred_time?: string | null
@@ -257,12 +358,15 @@ export type Database = {
           assigned_craftsman_id?: string | null
           automation_note?: string | null
           broadcast_count?: number
+          cancelled_at?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string | null
           customer_user_id?: string | null
           description?: string
+          dispatcher_note?: string | null
           district?: string
+          email?: string | null
           id?: string
           phone?: string
           photo_path?: string | null
@@ -285,6 +389,10 @@ export type Database = {
       accept_job_offer: {
         Args: { p_minutes: number; p_offer: string; p_token: string }
         Returns: string
+      }
+      assign_request: {
+        Args: { p_craftsman: string; p_request: string }
+        Returns: undefined
       }
     }
     Enums: {
