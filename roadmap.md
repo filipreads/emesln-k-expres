@@ -1,10 +1,11 @@
 # Rozšíření služby
-- [ ] E-mail místo telefonů ve všech formulářích a přehledech; dotazy e-mailem.
-- [ ] Dispečink: filtry, automatické obnovení, přiřazení, poznámky, zrušení, statistiky.
-- [ ] Účet: profil, předvyplnění, zrušení nepřijaté zakázky.
-- [ ] Portál: dostupnost, historie, hodnocení a potvrzení dokončení.
-- [ ] Spolehlivost: bezpečné změny, historie, ochrana proti spamu, testy.
+- [x] E-mail místo telefonů ve všech formulářích a přehledech; dotazy e-mailem.
+- [x] Dispečink: filtry, automatické obnovení, přiřazení, poznámky, zrušení, statistiky.
+- [x] Účet: profil, předvyplnění, zrušení nepřijaté zakázky.
+- [x] Portál: dostupnost, historie, hodnocení a potvrzení dokončení.
+- [x] Spolehlivost: bezpečné změny, historie, ochrana proti spamu, testy.
 - [ ] Automatické e-maily zákazníkům, mistrům a na Dirtparkborsov@gmail.com — čeká na vlastní odesílací doménu.
+- [ ] Nastavení e-mailových oznámení v účtu — čeká na odesílací doménu a zapojení spravovaných e-mailů; nevytvářet vlastní odhlašovací systém.
 - [x] Navazující kontrola: termín v zákaznickém účtu a jednotné zobrazení ve sledování.
 - [x] Navazující kontrola: plánované zakázky bez příslibu okamžitého příjezdu.
 - [x] Monitoring: zobrazit požadovaný termín dispečerům a řemeslníkům.

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DISPATCH_EMAIL } from "@/lib/communication";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/objednavka")({
@@ -96,6 +97,7 @@ function Tracking() {
       {data.craftsman && <p className="mt-2 text-muted-foreground">Váš mistr: <span className="font-semibold text-foreground">{data.craftsman}</span></p>}
       {data.urgency === "planovano" && data.status !== "dokonceno" && <p className="mt-3 flex items-start gap-2 font-semibold"><CalendarClock className="h-5 w-5 shrink-0 text-primary" /><span>Požadovaný termín: {data.preferred_time ? <time dateTime={data.preferred_time}>{formatPreferredTime(data.preferred_time)}</time> : "Neuveden – ověřte s dispečinkem"}</span></p>}
       {!data.cancelled_at && shouldShowArrivalCountdown(data) && data.arrival_minutes !== null && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
+      <Button asChild variant="outline" className="mt-5"><a href={`mailto:${DISPATCH_EMAIL}?subject=${encodeURIComponent("Dotaz k objednávce " + (token ?? ""))}`}><Mail />Napsat dispečinku</a></Button>
       {data.craftsman_email && <Button asChild size="lg" className="mt-5 w-full sm:w-auto"><a href={`mailto:${data.craftsman_email}`}><Mail className="h-5 w-5" />Napsat mistrovi</a></Button>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
 

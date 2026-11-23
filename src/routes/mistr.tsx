@@ -29,7 +29,7 @@ function Portal() {
   const [rated, setRated] = useState<string[]>([]);
   const load = useCallback(async () => {
     if (!token || !z.string().uuid().safeParse(token).success) { setError("Otevřete soukromý odkaz od dispečinku."); return; }
-    try { const d = await craftsmanPortal({ data: { token } }); setData(d); setError(""); const done = d.jobs.filter(j => j.status === "dokonceno").map(j => j.id); setRated(await myRatings({ data: { ids: done, direction: "craftsman_to_customer" } })); }
+    try { const d = await craftsmanPortal({ data: { token } }); setData(d); setError(""); const done = d.jobs.filter(j => j.status === "dokonceno").map(j => j.id); setRated(await myRatings({ data: { token, ids: done } })); }
     catch (e) { setError(e instanceof Error ? e.message : "Načtení selhalo"); setData(null); }
   }, [token]);
   useEffect(() => { load(); const interval = setInterval(load, 15000); return () => clearInterval(interval); }, [load]);

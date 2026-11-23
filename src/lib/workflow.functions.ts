@@ -74,10 +74,15 @@ export const rateCustomer = createServerFn({ method: "POST" }).inputValidator(to
   return { ok: true };
 });
 
-export const myRatings = createServerFn({ method: "POST" }).inputValidator(z.object({ ids: z.array(z.string().uuid()).max(50), direction: z.enum(["customer_to_craftsman", "craftsman_to_customer"]) })).handler(async ({ data }) => {
-  if (!data.ids.length) return [] as string[];
+export const myRatings = createServerFn({ method: "POST" }).inputValidator(tokenSchema.extend({ ids: z.array(z.string().uuid()).max(50) })).handler(async ({ data }) => {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const { data: rows } = await db.from("ratings").select("request_id").in("request_id", data.ids).eq("direction", data.direction);
+  const { data: craftsman } = await db.from("craftsman_applications").select("id").eq("portal_token", data.token).eq("approved", true).single();
+  if (!craftsman) throw new Error("Neplatný přístup");
+  if (!data.ids.length) return [] as string[];
+  const { data: own } = await db.from("service_requests").select("id").eq("assigned_craftsman_id", craftsman.id).in("id", data.ids);
+  if (!own?.length) return [] as string[];
+  const { data: rows, error } = await db.from("ratings").select("request_id").in("request_id", own.map(r => r.id)).eq("direction", "craftsman_to_customer");
+  if (error) throw new Error("Hodnocení se nepodařilo načíst");
   return (rows ?? []).map(r => r.request_id);
 });
 

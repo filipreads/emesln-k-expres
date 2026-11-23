@@ -58,7 +58,10 @@ export const submitRequest = createServerFn({ method: "POST" })
       .insert({ ...parsed, city: parsed.district, photo_path, customer_user_id: await optionalUser(db) })
       .select("id,tracking_token")
       .single();
-    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
+    if (error || !row) {
+      if (photo_path) await db.storage.from("request-photos").remove([photo_path]);
+      throw new Error(error?.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
+    }
     try {
       const { analyze, createOffers } = await import("./workflow.server");
       let image: string | undefined;
@@ -105,8 +108,8 @@ export const listDashboard = createServerFn({ method: "POST" })
     checkPin(data.pin);
     const db = await admin();
     const [requestsResult, craftsResult] = await Promise.all([
-      db.from("service_requests").select("*").order("created_at", { ascending: false }).limit(200),
-      db.from("craftsman_applications").select("*").order("created_at", { ascending: false }).limit(200),
+      db.from("service_requests").select("id,created_at,updated_at,urgency,trade,address,district,city,region,description,email,customer_name,postal_code,preferred_time,photo_path,status,broadcast_count,tracking_token,ai_reason,automation_note,assigned_craftsman_id,arrival_minutes,dispatcher_note,cancelled_at").order("created_at", { ascending: false }).limit(200),
+      db.from("craftsman_applications").select("id,name,trade,area,region,email,approved,available,portal_token,created_at").order("created_at", { ascending: false }).limit(200),
     ]);
     const { data: callbacks } = await db.from("contact_messages").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(100);
     if (requestsResult.error || craftsResult.error) throw new Error("Načtení nástěnky selhalo");

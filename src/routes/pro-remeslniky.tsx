@@ -16,7 +16,7 @@ export const Route = createFileRoute("/pro-remeslniky")({
       { title: "Přidejte se do sítě – Fofr Mistr pro řemeslníky" },
       { name: "description", content: "Jste instalatér, elektrikář, zámečník nebo hodinový manžel v celé ČR? Získejte zakázky bez shánění." },
       { property: "og:title", content: "Přidejte se do sítě Fofr Mistr" },
-      { property: "og:description", content: "Zakázky v celé ČR přímo do telefonu." },
+      { property: "og:description", content: "Zakázky v celé ČR v soukromém přehledu, komunikace e-mailem." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
