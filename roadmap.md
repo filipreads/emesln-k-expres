@@ -1,6 +1,6 @@
 # Rozšíření služby
-- [ ] Navazující kontrola: termín v zákaznickém účtu a jednotné zobrazení ve sledování.
-- [ ] Navazující kontrola: plánované zakázky bez příslibu okamžitého příjezdu.
+- [x] Navazující kontrola: termín v zákaznickém účtu a jednotné zobrazení ve sledování.
+- [x] Navazující kontrola: plánované zakázky bez příslibu okamžitého příjezdu.
 - [x] Monitoring: zobrazit požadovaný termín dispečerům a řemeslníkům.
 - [x] Monitoring: skrýt dostupnost a odhad dojezdu starší než 12 hodin.
 - [x] Rozšířit zákaznický účet o stav, adresu a podrobnosti objednávek a ověřit přihlášený přehled.
