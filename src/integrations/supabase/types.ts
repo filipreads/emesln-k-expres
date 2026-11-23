@@ -394,6 +394,22 @@ export type Database = {
         Args: { p_craftsman: string; p_request: string }
         Returns: undefined
       }
+      change_request: {
+        Args: {
+          p_actor: string
+          p_cancel?: boolean
+          p_craftsman?: string
+          p_customer?: string
+          p_id: string
+          p_note?: string
+          p_status?: string
+        }
+        Returns: undefined
+      }
+      set_craftsman_state: {
+        Args: { p_approved: boolean; p_available: boolean; p_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       request_status:

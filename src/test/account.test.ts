@@ -21,6 +21,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({
           return {
             order: () => ({ limit: async () => ({ data: mocks.orderRows, error: mocks.error }) }),
             limit: async () => ({ data: [] }),
+            maybeSingle: async () => ({ data: null }),
           };
         } };
       },
@@ -49,7 +50,7 @@ describe("Customer order overview", () => {
   it("returns saved status, address and job details", async () => {
     const result = await runAccount({ context });
     const projection = mocks.select.mock.calls.find(([table]) => table === "service_requests")?.[1].split(",");
-    expect(projection).toEqual(expect.arrayContaining(["status", "address", "description", "urgency", "postal_code", "phone"]));
+    expect(projection).toEqual(expect.arrayContaining(["status", "address", "description", "urgency", "postal_code", "email"]));
     expect(result.orders[0]).toEqual({ id: "own-order", address: "Masarykova 1", description: "Teče voda pod dřezem", status: "na_ceste" });
   });
 

@@ -5,6 +5,9 @@ import { CheckCircle2, Siren, Wrench, CalendarClock, MapPin, LocateFixed, Camera
 import { submitRequest } from "@/lib/api.functions";
 import { suggestAddress, reverseAddress, type AddressSuggestion } from "@/lib/address.functions";
 import { TRADE_INFO, SERVICE_ORDER, CALLOUT_FEE, URGENCY_LABEL, estimatePrice, type Trade, type Urgency } from "@/lib/content";
+import { emailSchema } from "@/lib/communication";
+import { getMyAccount } from "@/lib/account.functions";
+import { useSessionUser } from "@/hooks/use-session";
 import { rememberOrder } from "@/lib/recent-orders";
 import { REGIONS, type Region } from "@/lib/regions";
 import { Button } from "@/components/ui/button";
@@ -19,10 +22,10 @@ export type Preset = { trade: Trade; issue?: string | undefined; nonce: number }
 type Draft = {
   urgency: Urgency; when: string; trade: Trade; description: string;
   place: string; address: string; postal: string; city: string; region: Region;
-  phone: string; name: string;
+  email: string; name: string;
 };
-const EMPTY: Draft = { urgency: "havarie", when: "", trade: "voda", description: "", place: "", address: "", postal: "", city: "", region: "Praha", phone: "", name: "" };
-const KEY = "fofr-draft-v1";
+const EMPTY: Draft = { urgency: "havarie", when: "", trade: "voda", description: "", place: "", address: "", postal: "", city: "", region: "Praha", email: "", name: "" };
+const KEY = "fofr-draft-v2";
 const STEPS = ["Závada", "Lokalita", "Kontakt"];
 
 async function compress(file: File): Promise<File> {
@@ -31,7 +34,9 @@ async function compress(file: File): Promise<File> {
     const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
     const c = document.createElement("canvas");
     c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
-    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    const ctx = c.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
     const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.8));
     return blob && blob.size < file.size ? new File([blob], "foto.jpg", { type: "image/jpeg" }) : file;
   } catch { return file; }
@@ -64,6 +69,7 @@ function Suggestions({ items, onPick }: { items: AddressSuggestion[]; onPick: (s
 }
 
 export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
+  const user = useSessionUser();
   const [d, setD] = useState<Draft>(EMPTY);
   const [step, setStep] = useState(0);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -87,6 +93,12 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
     setStep(0); setDone(null);
   }, [preset]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  useEffect(() => {
+    if (!user) return;
+    setD(p => ({ ...p, email: p.email || user.email || "" }));
+    getMyAccount().then(a => setD(p => ({ ...p, name: p.name || a.name || "", address: p.address || a.profile?.address || "", city: p.city || a.profile?.city || "", place: p.place || a.profile?.city || "", postal: p.postal || a.profile?.postal_code || "", region: p.address ? p.region : REGIONS.find(r => r === a.profile?.region) ?? p.region }))).catch(() => {});
+  }, [user?.id]);
 
   const isPostal = /^\d/.test(d.place.trim());
   const [placeItems, setPlaceItems] = useSuggest(isPostal ? d.place.replace(/\s/g, "").replace(/^(\d{3})(\d+)/, "$1 $2") : d.place, isPostal, focus === "place");
@@ -138,9 +150,9 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
   const valid = [
     d.description.trim().length >= 5 && (d.urgency !== "planovano" || (!!d.when && new Date(d.when).getTime() > Date.now())),
     d.address.trim().length >= 3 && city.trim().length >= 2,
-    /^(\+420)?\s?\d{3}\s?\d{3}\s?\d{3}$/.test(d.phone.trim()),
+    emailSchema.safeParse(d.email).success,
   ];
-  const hints = [d.urgency === "planovano" && !(d.when && new Date(d.when).getTime() > Date.now()) ? "Vyberte budoucí termín návštěvy." : "Popište prosím závadu (aspoň pár slov).", "Doplňte město a adresu.", "Zadejte telefon ve tvaru 777 123 456."];
+  const hints = [d.urgency === "planovano" && !(d.when && new Date(d.when).getTime() > Date.now()) ? "Vyberte budoucí termín návštěvy." : "Popište prosím závadu (aspoň pár slov).", "Doplňte město a adresu.", "Zadejte platný e-mail."];
 
   function next() { if (!valid[step]) { toast.error(hints[step]); return; } setStep((s) => s + 1); }
 
@@ -150,7 +162,7 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
     fd.set("urgency", d.urgency); fd.set("trade", d.trade); fd.set("description", d.description.trim());
     fd.set("address", d.address); fd.set("district", city.trim()); fd.set("region", d.region);
     if (d.urgency === "planovano" && d.when) fd.set("preferred_time", new Date(d.when).toISOString());
-    fd.set("phone", d.phone); fd.set("customer_name", d.name);
+    fd.set("email", d.email); fd.set("customer_name", d.name);
     if (/^\d{3}\s?\d{2}$/.test(d.postal.trim())) fd.set("postal_code", d.postal.trim());
     if (photo) fd.set("photo", photo);
     setBusy(true);
@@ -176,9 +188,9 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Obor</dt><dd className="font-semibold">{TRADE_INFO[s.trade].name}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Naléhavost</dt><dd className="font-semibold">{URGENCY_LABEL[s.urgency]}{s.urgency === "planovano" && s.when ? ` · ${new Date(s.when).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" })}` : ""}</dd></div>
           <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Adresa</dt><dd className="text-right font-semibold">{s.address}, {s.city}</dd></div>
-          <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Telefon</dt><dd className="font-semibold">{s.phone}</dd></div>
+          <div className="flex justify-between gap-4"><dt className="text-muted-foreground">E-mail</dt><dd className="font-semibold">{s.email}</dd></div>
         </dl>
-        <p className="mt-4 text-sm text-muted-foreground">{s.urgency === "planovano" ? "Dispečink hledá mistra pro váš požadovaný termín a potvrdí vám ho telefonem." : "Dispečink teď hledá nejbližšího volného mistra. Čas příjezdu potvrdí řemeslník při přijetí."}</p>
+        <p className="mt-4 text-sm text-muted-foreground">{s.urgency === "planovano" ? "Dispečink hledá mistra pro váš požadovaný termín a potvrdí vám ho e-mailem." : "Dispečink teď hledá nejbližšího volného mistra. Čas příjezdu potvrdí řemeslník při přijetí."}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button asChild size="lg"><Link to="/objednavka" search={{ token: done.token }}>Sledovat objednávku</Link></Button>
           <Button size="lg" variant="outline" onClick={() => setDone(null)}>Nový požadavek</Button>
@@ -214,7 +226,7 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
               <div>
                 <Label htmlFor="w-when">Kdy se vám to hodí?</Label>
                 <Input id="w-when" type="datetime-local" value={d.when} onChange={(e) => set("when", e.target.value)} className="mt-1 h-12 text-base" />
-                <p className="mt-1 text-sm text-muted-foreground">Termín vám dispečink potvrdí telefonem.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Termín vám dispečink potvrdí e-mailem.</p>
               </div>
             )}
             <div className="rounded-xl bg-muted p-4 text-sm" aria-live="polite">
@@ -295,8 +307,8 @@ export function OrderWizard({ preset }: { preset?: Preset | undefined }) {
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="w-phone">Telefon</Label>
-                <Input id="w-phone" type="tel" autoComplete="tel" value={d.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+420 777 123 456" className="mt-1 h-12 text-base" />
+                <Label htmlFor="w-email">E-mail</Label>
+                <Input id="w-email" type="email" autoComplete="email" value={d.email} onChange={(e) => set("email", e.target.value)} placeholder="vas@email.cz" className="mt-1 h-12 text-base" />
               </div>
               <div>
                 <Label htmlFor="w-name">Jméno (nepovinné)</Label>

@@ -5,10 +5,7 @@ import { REGIONS } from "./regions";
 export const TRADES = ["voda", "elektro", "zamecnik", "manzel"] as const;
 export const STATUSES = ["nova", "oslovovani", "prijato", "na_ceste", "dokonceno"] as const;
 
-const phone = z
-  .string()
-  .trim()
-  .regex(/^(\+420)?\s?\d{3}\s?\d{3}\s?\d{3}$/, "Zadejte platné české telefonní číslo");
+import { emailSchema, canChangeStatus } from "./communication";
 
 const requestSchema = z.object({
   urgency: z.enum(["havarie", "dnes", "planovano"]),
@@ -18,7 +15,7 @@ const requestSchema = z.object({
   district: z.string().trim().min(2).max(100),
   region: z.enum(REGIONS),
   description: z.string().trim().min(5).max(2000),
-  phone,
+  email: emailSchema,
   customer_name: z.string().trim().max(100).optional().transform((v) => v || null),
   postal_code: z.string().trim().regex(/^(\d{3}\s?\d{2})?$/, "PSČ má 5 číslic").optional().transform((v) => v || null),
 });
@@ -43,7 +40,7 @@ export const submitRequest = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const parsed = requestSchema.refine((r) => r.urgency !== "planovano" || !!r.preferred_time, "Vyberte termín návštěvy").parse(Object.fromEntries(
-      ["urgency", "trade", "address", "district", "region", "description", "phone", "postal_code", "customer_name", "preferred_time"].map((k) => [k, data.get(k) ?? undefined]),
+      ["urgency", "trade", "address", "district", "region", "description", "email", "postal_code", "customer_name", "preferred_time"].map((k) => [k, data.get(k) ?? undefined]),
     ));
     const db = await admin();
     let photo_path: string | null = null;
@@ -61,7 +58,7 @@ export const submitRequest = createServerFn({ method: "POST" })
       .insert({ ...parsed, city: parsed.district, photo_path, customer_user_id: await optionalUser(db) })
       .select("id,tracking_token")
       .single();
-    if (error) throw new Error("Uložení selhalo");
+    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
     try {
       const { analyze, createOffers } = await import("./workflow.server");
       let image: string | undefined;
@@ -87,13 +84,13 @@ export const submitApplication = createServerFn({ method: "POST" })
       trade: z.enum(TRADES),
       area: z.string().trim().min(2).max(200),
       region: z.enum(REGIONS),
-      phone,
+      email: emailSchema,
     }),
   )
   .handler(async ({ data }) => {
     const db = await admin();
     const { error } = await db.from("craftsman_applications").insert({ ...data, user_id: await optionalUser(db) });
-    if (error) throw new Error("Uložení selhalo");
+    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
     return { ok: true };
   });
 
@@ -111,18 +108,17 @@ export const listDashboard = createServerFn({ method: "POST" })
       db.from("service_requests").select("*").order("created_at", { ascending: false }).limit(200),
       db.from("craftsman_applications").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
-    const { data: callbacks } = await db.from("callback_requests").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(100);
+    const { data: callbacks } = await db.from("contact_messages").select("*").eq("handled", false).order("created_at", { ascending: false }).limit(100);
     if (requestsResult.error || craftsResult.error) throw new Error("Načtení nástěnky selhalo");
-    const withPhotos = [];
-    for (const r of requestsResult.data ?? []) {
-      const result = await (async () => {
-        if (!r.photo_path) return { ...r, photo_url: null as string | null };
-        const { data: s } = await db.storage.from("request-photos").createSignedUrl(r.photo_path, 3600);
-        return { ...r, photo_url: s?.signedUrl ?? null };
-      })();
-      withPhotos.push(result);
-    }
-    return { requests: withPhotos, craftsmen: craftsResult.data ?? [], callbacks: callbacks ?? [] };
+    const withPhotos = await Promise.all((requestsResult.data ?? []).map(async r => {
+      if (!r.photo_path) return { ...r, photo_url: null as string | null };
+      const { data: signed } = await db.storage.from("request-photos").createSignedUrl(r.photo_path, 3600);
+      return { ...r, photo_url: signed?.signedUrl ?? null };
+    }));
+    const { data: ratings } = await db.from("ratings").select("stars").eq("direction", "customer_to_craftsman");
+    const { data: events } = await db.from("request_events").select("request_id,event,actor,created_at").order("created_at", { ascending: false }).limit(500);
+    return { requests: withPhotos, craftsmen: craftsResult.data ?? [], callbacks: callbacks ?? [], events: events ?? [], average: ratings?.length ? Math.round(ratings.reduce((sum,r) => sum+r.stars,0)/ratings.length*10)/10 : null };
+
   });
 
 export const updateRequest = createServerFn({ method: "POST" })
@@ -132,18 +128,15 @@ export const updateRequest = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     checkPin(data.pin);
     const db = await admin();
-    const { data: cur } = await db.from("service_requests").select("broadcast_count,status").eq("id", data.id).single();
-    if (!cur) throw new Error("Zakázka nenalezena");
-    const patch: { status?: (typeof STATUSES)[number]; broadcast_count?: number; updated_at: string } = {
-      updated_at: new Date().toISOString(),
-    };
-    if (data.status) patch.status = data.status;
+    const { data: cur } = await db.from("service_requests").select("broadcast_count,status,cancelled_at").eq("id", data.id).single();
+    if (!cur || cur.cancelled_at) throw new Error("Zakázka nenalezena");
+    if (data.status && !canChangeStatus(cur.status, data.status)) throw new Error("Nepovolená změna stavu. Přijetí provádí přiřazený mistr.");
     if (data.broadcast) {
       const { createOffers } = await import("./workflow.server");
       const result = await createOffers(data.id);
       return result;
     }
-    const { error } = await db.from("service_requests").update(patch).eq("id", data.id);
+    const { error } = await db.rpc("change_request", { p_id: data.id, p_actor: "dispecink", ...(data.status ? { p_status: data.status } : {}) });
     if (error) throw new Error("Aktualizace selhala");
     return { ok: true };
   });
@@ -160,7 +153,7 @@ export const setAvailability = createServerFn({ method: "POST" })
     checkPin(data.pin);
     const db = await admin();
     const { error } = await db.from("availability").upsert({ id: 1, available_count: data.available_count, eta_minutes: data.eta_minutes, updated_at: new Date().toISOString() });
-    if (error) throw new Error("Uložení selhalo");
+    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
     return { ok: true };
   });
 
@@ -182,21 +175,21 @@ export const classifyIssue = createServerFn({ method: "POST" })
     return analyze(data.description, image);
   });
 
-export const submitCallback = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ phone, trade: z.enum(TRADES) }))
+export const submitContact = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ email: emailSchema, trade: z.enum(TRADES), message: z.string().trim().min(5).max(2000) }))
   .handler(async ({ data }) => {
     const db = await admin();
-    const { error } = await db.from("callback_requests").insert(data);
-    if (error) throw new Error("Uložení selhalo");
+    const { error } = await db.from("contact_messages").insert(data);
+    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
     return { ok: true };
   });
 
-export const markCallback = createServerFn({ method: "POST" })
+export const markContact = createServerFn({ method: "POST" })
   .inputValidator(z.object({ pin: z.string().max(200), id: z.string().uuid() }))
   .handler(async ({ data }) => {
     checkPin(data.pin);
     const db = await admin();
-    const { error } = await db.from("callback_requests").update({ handled: true }).eq("id", data.id);
-    if (error) throw new Error("Uložení selhalo");
+    const { error } = await db.from("contact_messages").update({ handled: true }).eq("id", data.id);
+    if (error) throw new Error(error.message.includes("submission_rate_limit") ? "Příliš mnoho požadavků. Zkuste to za hodinu." : "Uložení selhalo");
     return { ok: true };
   });

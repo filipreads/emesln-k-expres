@@ -1,3 +1,8 @@
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { ProfileEditor } from "@/components/ProfileEditor";
+import { cancelMyOrder } from "@/lib/management.functions";
+import { canCancelOrder } from "@/lib/communication";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Award, CheckCircle2, Clock3, Lock, MapPin, Receipt, RefreshCw, Star, Trophy, Wrench } from "lucide-react";
@@ -97,6 +102,7 @@ function EmptyState({ icon: Icon, title, text, action }: { icon: typeof Receipt;
 
 function Account() {
   const { data, refetch, isFetching, isRefetchError } = useSuspenseQuery(accountQuery);
+  const cancelOrder = useServerFn(cancelMyOrder);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const done = data.orders.filter((o) => o.status === "dokonceno").length;
@@ -121,6 +127,8 @@ function Account() {
           <Stat label="Body" value={data.customerGame.points} icon={Star} />
           <Stat label="Úroveň" value={data.customerGame.level} icon={Trophy} />
         </section>
+
+        <ProfileEditor profile={data.profile} name={data.name} onSaved={() => { refetch(); }} />
 
         <Tabs defaultValue="customer">
           <TabsList aria-label="Přehled účtu" className="w-full max-w-sm">
@@ -151,18 +159,19 @@ function Account() {
                       <article className="min-w-0 rounded-lg border border-border bg-card p-5 sm:p-6">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div><h3 className="text-lg font-bold">{TRADE_INFO[o.trade as Trade]?.name ?? o.trade}</h3><p className="mt-1 text-xs text-muted-foreground">Objednáno {formatDate(o.created_at)}</p></div>
-                          <span className={`max-w-full break-words rounded-md px-3 py-1 text-sm font-semibold ${o.status === "dokonceno" ? "bg-muted text-success" : "bg-accent text-accent-foreground"}`}>{STATUS_LABEL[o.status]}</span>
+                          <span className={`max-w-full break-words rounded-md px-3 py-1 text-sm font-semibold ${o.status === "dokonceno" ? "bg-muted text-success" : "bg-accent text-accent-foreground"}`}>{o.cancelled_at ? "Zrušeno" : STATUS_LABEL[o.status]}</span>
                         </div>
                         <p className="mt-4 flex items-start gap-2 text-sm"><MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 break-words">{o.address}<br />{[o.postal_code, o.city || o.district].filter(Boolean).join(" ")}{o.region && <span className="block text-muted-foreground">{o.region}</span>}</span></p>
                         <p className="mt-4 whitespace-pre-wrap break-words text-sm">{o.description}</p>
                         <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
                           <div><dt className="text-muted-foreground">Naléhavost</dt><dd className={o.urgency === "havarie" ? "font-semibold text-destructive" : "font-semibold"}>{urgencyLabel(o.urgency ?? "")}</dd></div>
                           {o.urgency === "planovano" && o.status !== "dokonceno" && <div><dt className="text-muted-foreground">Požadovaný termín</dt><dd className="font-semibold">{o.preferred_time ? <time dateTime={o.preferred_time}>{formatPreferredTime(o.preferred_time)}</time> : "Neuveden – ověřte s dispečinkem"}</dd></div>}
-                          <div><dt className="text-muted-foreground">Kontaktní telefon</dt><dd className="font-semibold">{o.phone}</dd></div>
+                          <div><dt className="text-muted-foreground">Kontaktní e-mail</dt><dd className="font-semibold">{o.email ?? "E-mail neuveden"}</dd></div>
                           {o.arrival_minutes != null && o.urgency !== "planovano" && o.status !== "dokonceno" && <div className="sm:col-span-2"><dt className="flex items-center gap-1 text-muted-foreground"><Clock3 className="h-4 w-4" />Odhad dojezdu při přijetí</dt><dd className="font-semibold">{o.arrival_minutes} minut</dd></div>}
                         </dl>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                           <p className="text-xs text-muted-foreground">Poslední změna: {formatDate(o.updated_at)}</p>
+                          {canCancelOrder(o) && <Button variant="outline" size="sm" onClick={async () => { if (!window.confirm("Opravdu chcete objednávku zrušit?")) return; try { await cancelOrder({ data: { id: o.id } }); toast.success("Objednávka zrušena"); await refetch(); } catch (e) { toast.error(e instanceof Error ? e.message : "Zrušení selhalo"); } }}>Zrušit objednávku</Button>}
                           <Button asChild variant="outline" size="sm"><Link to="/objednavka" search={{ token: o.tracking_token }}>Sledovat objednávku<ArrowUpRight className="h-4 w-4" /></Link></Button>
                         </div>
                       </article>

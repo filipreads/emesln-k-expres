@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, PhoneCall, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, CheckCircle2, MessageCircleQuestion, Quote } from "lucide-react";
+import { Droplets, KeyRound, Hammer, Zap, ShieldCheck, Mail, Truck, Wallet, ArrowRight, Wrench, BadgeCheck, Receipt, Clock, CheckCircle2, MessageCircleQuestion, Quote } from "lucide-react";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { OrderWizard, type Preset } from "@/components/OrderWizard";
-import { MobileBar, CallbackDialog } from "@/components/MobileActions";
+import { MobileBar, ContactDialog } from "@/components/MobileActions";
 import { getAvailability } from "@/lib/api.functions";
 import { publicReviews } from "@/lib/workflow.functions";
 import { Stars } from "@/components/RatingForm";
@@ -79,7 +79,7 @@ function ServiceCard({ trade, onPick }: { trade: Trade; onPick: (t: Trade, issue
 }
 
 const STEPS = [
-  { time: "00:01", Icon: PhoneCall, title: "Zadáte požadavek", text: "Tři krátké kroky nebo jen telefon. Stačí minuta." },
+  { time: "00:01", Icon: Mail, title: "Zadáte požadavek", text: "Tři krátké kroky a váš e-mail. Stačí minuta." },
   { time: "00:05", Icon: Truck, title: "Dispečink spojí mistra", text: "Oslovíme nejbližšího ověřeného mistra ve vašem kraji a potvrdíme čas." },
   { time: "~00:40", Icon: Wrench, title: "Mistr je u vás", text: "Řekne odhad ceny, opraví a platíte až po hotové práci." },
 ];
@@ -168,7 +168,7 @@ function Index() {
           <p className="mt-5 max-w-xl text-lg opacity-85">Klid, postaráme se o to. Popište závadu, dispečer obratem osloví nejbližšího prověřeného mistra a vy platíte až po hotové práci.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button size="lg" className="h-14 px-8 text-base font-bold" onClick={scrollToOrder}>Objednat mistra <ArrowRight className="h-5 w-5" /></Button>
-            <Button size="lg" variant="outline" className="h-14 border-secondary-foreground/40 bg-transparent px-8 text-base font-bold text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-secondary-foreground" onClick={() => setCb(true)}><PhoneCall className="h-5 w-5" /> Zavolejte mi do 5 min</Button>
+            <Button size="lg" variant="outline" className="h-14 border-secondary-foreground/40 bg-transparent px-8 text-base font-bold text-secondary-foreground hover:bg-secondary-foreground/10 hover:text-secondary-foreground" onClick={() => setCb(true)}><Mail className="h-5 w-5" /> Napsat dispečinku</Button>
           </div>
 
           <h2 id="sluzby" className="mt-16 scroll-mt-24 text-sm font-bold uppercase tracking-widest opacity-75">S čím vám pomůžeme – klepněte na kartu nebo závadu</h2>
@@ -252,14 +252,14 @@ function Index() {
           <p className="max-w-xl text-lg opacity-90">Objednávka zabere dvě minuty. Výjezd {CALLOUT_FEE} Kč s diagnostikou, cenu opravy znáte předem.</p>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button size="lg" onClick={scrollToOrder}>Objednat mistra <ArrowRight className="h-4 w-4" /></Button>
-            <Button size="lg" variant="secondary" onClick={() => setCb(true)}><PhoneCall className="h-4 w-4" />Zavolejte mi</Button>
+            <Button size="lg" variant="secondary" onClick={() => setCb(true)}><Mail className="h-4 w-4" />Napsat dispečinku</Button>
           </div>
         </div>
       </section>
 
       <SiteFooter />
       <MobileBar onOrder={scrollToOrder} />
-      <CallbackDialog open={cb} onOpenChange={setCb} />
+      <ContactDialog open={cb} onOpenChange={setCb} />
     </div>
   );
 }

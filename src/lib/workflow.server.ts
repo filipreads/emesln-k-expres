@@ -25,9 +25,9 @@ export async function analyze(description: string, image?: string) {
 }
 
 export async function createOffers(id: string) {
-  const { data: r, error } = await db.from("service_requests").select("id,trade,region,status,assigned_craftsman_id").eq("id", id).single();
+  const { data: r, error } = await db.from("service_requests").select("id,trade,region,status,assigned_craftsman_id,cancelled_at").eq("id", id).single();
   if (error || !r) throw new Error("Zakázka nenalezena");
-  if (r.assigned_craftsman_id || r.status === "dokonceno") return { count: 0 };
+  if (r.cancelled_at || r.assigned_craftsman_id || r.status === "dokonceno") return { count: 0 };
   const { data: crafts, error: ce } = await db.from("craftsman_applications").select("id,trade,region,approved,available").eq("region", r.region ?? "").eq("trade", r.trade).eq("approved", true).eq("available", true).limit(20);
   if (ce) throw new Error("Výběr řemeslníků selhal");
   const matches = (crafts ?? []).filter(c => canOffer(r, c));

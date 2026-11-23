@@ -37,7 +37,7 @@ use the editor.
 - Gamification (points, levels, achievements) is computed on read from order data in src/lib/gamification.ts, not stored. Why: no drift between badges and real order history.
 - Customer account order details use the authenticated account function's owner-filtered projection and refresh every 15 seconds. Why: keep private job details scoped to their customer and displayed statuses current.
 - Address and postal-code suggestions use the free Photon (OSM) geocoder via a server function, limited to CZ. Why: no API key needed.
-- Home order form is a 3-step wizard (src/components/OrderWizard.tsx) with a localStorage draft and client-side photo compression; it still posts FormData to submitRequest. Callback requests go to a service-role-only callback_requests table shown on /dispecink. Why: faster ordering without changing the server workflow.
+- Home order form is a 3-step wizard (src/components/OrderWizard.tsx) with a localStorage draft and client-side photo compression; it still posts FormData to submitRequest. Contact messages go to service-role-only contact_messages and contain email, trade and message. Why: faster ordering without changing the server workflow.
 
 - Theme comes from the attached design system: its fluxora.css is imported in layer(base) and its :root palette is mirrored in src/styles.css, because its styles.css cannot be layered (nested tw-animate @utility) and unlayered resets would override Tailwind utilities.
 
@@ -45,3 +45,8 @@ use the editor.
 - Homepage availability uses the shared freshness helper and rechecks time while open; dispatcher reads remain raw. Why: expire public availability claims without hiding the operator's saved settings.
 - Saved scheduled visit dates in dispatcher, craftsman, account and tracking views use the shared Czech formatter with Europe/Prague timezone. Why: show the same requested local slot regardless of the viewer's device timezone.
 - Immediate arrival countdowns exclude scheduled jobs even after acceptance. Why: accepting a future visit does not promise arrival within the travel-time estimate.
+
+- Order cancellation, progression, assignment and craftsman availability use service-role-only row-locked RPCs after server-side PIN, owner or capability checks. Why: prevent conflicting acceptance/cancellation and double booking.
+- Customer defaults are stored in customer_profiles and accessed only by owner-checked server functions. Why: keep guest ordering independent from optional account settings.
+- Submission throttling runs in database triggers with email-scoped advisory locks. Why: concurrent requests must not bypass per-hour limits.
+- request_events records changes through a database trigger using actor context from mutation RPCs. Why: one audit path covers every status mutation.

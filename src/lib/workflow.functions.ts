@@ -6,23 +6,24 @@ const tokenSchema = z.object({ token: z.string().uuid() });
 
 export const trackOrder = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  const { data: r, error } = await db.from("service_requests").select("id,status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at,preferred_time").eq("tracking_token", data.token).single();
+  const { data: r, error } = await db.from("service_requests").select("id,status,trade,urgency,arrival_minutes,assigned_craftsman_id,updated_at,preferred_time,cancelled_at").eq("tracking_token", data.token).single();
   if (error || !r) throw new Error("Objednávka nenalezena");
-  let name: string | null = null; let craftsmanPhone: string | null = null;
-  if (r.assigned_craftsman_id) { const { data: c } = await db.from("craftsman_applications").select("name,phone").eq("id", r.assigned_craftsman_id).single(); name = c?.name ?? null; if (r.status === "prijato" || r.status === "na_ceste") craftsmanPhone = c?.phone ?? null; }
+  let name: string | null = null; let craftsmanEmail: string | null = null;
+  if (r.assigned_craftsman_id) { const { data: c } = await db.from("craftsman_applications").select("name,email").eq("id", r.assigned_craftsman_id).single(); name = c?.name ?? null; if (r.status === "prijato" || r.status === "na_ceste") craftsmanEmail = c?.email ?? null; }
   const { data: rated } = await db.from("ratings").select("id").eq("request_id", r.id).eq("direction", "customer_to_craftsman").maybeSingle();
-  return { rated: !!rated, status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, preferred_time: r.preferred_time, craftsman: name, craftsman_phone: craftsmanPhone };
+  return { rated: !!rated, cancelled_at: r.cancelled_at, status: r.status, trade: r.trade, urgency: r.urgency, arrival_minutes: r.arrival_minutes, updated_at: r.updated_at, preferred_time: r.preferred_time, craftsman: name, craftsman_email: craftsmanEmail };
 });
 
 export const craftsmanPortal = createServerFn({ method: "POST" }).inputValidator(tokenSchema).handler(async ({ data }) => {
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: c, error } = await db.from("craftsman_applications").select("id,name,approved,available,region,trade").eq("portal_token", data.token).single();
   if (error || !c || !c.approved) throw new Error("Přístup není schválen nebo odkaz není platný");
-  const { data: offers, error: oe } = await db.from("job_offers").select("id,state,service_requests(id,city,region,description,trade,urgency,preferred_time,status,assigned_craftsman_id)").eq("craftsman_id", c.id).in("state", ["pending", "accepted"]).order("created_at", { ascending: false }).limit(50);
+  const { data: offers, error: oe } = await db.from("job_offers").select("id,state,service_requests(id,city,region,description,trade,urgency,preferred_time,status,assigned_craftsman_id,cancelled_at)").eq("craftsman_id", c.id).in("state", ["pending", "accepted"]).order("created_at", { ascending: false }).limit(50);
   if (oe) throw new Error("Načtení nabídek selhalo");
-  const { data: jobs, error: je } = await db.from("service_requests").select("id,address,city,district,phone,status,arrival_minutes,description,urgency,preferred_time").eq("assigned_craftsman_id", c.id).order("created_at", { ascending: false }).limit(50);
+  const { data: jobs, error: je } = await db.from("service_requests").select("id,address,city,district,email,status,arrival_minutes,description,urgency,preferred_time,cancelled_at").eq("assigned_craftsman_id", c.id).order("created_at", { ascending: false }).limit(50);
   if (je) throw new Error("Načtení zakázek selhalo");
-  return { craftsman: c, offers: (offers ?? []).filter(o => o.state === "pending" && o.service_requests && !o.service_requests.assigned_craftsman_id && ["nova", "oslovovani"].includes(o.service_requests.status)), jobs: jobs ?? [] };
+  const { data: ratings } = await db.from("ratings").select("stars").eq("direction", "customer_to_craftsman").in("request_id", (jobs ?? []).map(j => j.id));
+  return { average: ratings?.length ? Math.round(ratings.reduce((sum,r) => sum+r.stars,0)/ratings.length*10)/10 : null, craftsman: c, offers: (offers ?? []).filter(o => o.state === "pending" && o.service_requests && !o.service_requests.cancelled_at && !o.service_requests.assigned_craftsman_id && ["nova", "oslovovani"].includes(o.service_requests.status)), jobs: jobs ?? [] };
 });
 
 export const acceptOffer = createServerFn({ method: "POST" }).inputValidator(tokenSchema.extend({ offer: z.string().uuid(), minutes: z.number().int().min(10).max(600) })).handler(async ({ data }) => {
@@ -36,21 +37,17 @@ export const progressJob = createServerFn({ method: "POST" }).inputValidator(tok
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: c } = await db.from("craftsman_applications").select("id").eq("portal_token", data.token).eq("approved", true).single();
   if (!c) throw new Error("Neplatný přístup");
-  const { data: r } = await db.from("service_requests").select("status").eq("id", data.id).eq("assigned_craftsman_id", c.id).single();
-  if (!r || !canProgress(r.status, data.status)) throw new Error("Nepovolená změna stavu");
-  const { data: rows, error } = await db.from("service_requests").update({ status: data.status, updated_at: new Date().toISOString() }).eq("id", data.id).eq("assigned_craftsman_id", c.id).eq("status", r.status).select("id");
-  if (error || !rows?.length) throw new Error("Stav se mezitím změnil");
+  const { data: r } = await db.from("service_requests").select("status,cancelled_at").eq("id", data.id).eq("assigned_craftsman_id", c.id).single();
+  if (!r || r.cancelled_at || !canProgress(r.status, data.status)) throw new Error("Nepovolená změna stavu");
+  const { error } = await db.rpc("change_request", { p_id: data.id, p_actor: "remeslnik", p_status: data.status, p_craftsman: c.id });
+  if (error) throw new Error("Stav se mezitím změnil");
   return { ok: true };
 });
 
 export const setCraftsman = createServerFn({ method: "POST" }).inputValidator(z.object({ pin: z.string().max(200), id: z.string().uuid(), approved: z.boolean(), available: z.boolean() })).handler(async ({ data }) => {
   if (!process.env["DISPATCH_PIN"] || data.pin !== process.env["DISPATCH_PIN"]) throw new Error("Neplatný PIN");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-  if (data.available) {
-    const { data: active } = await db.from("service_requests").select("id").eq("assigned_craftsman_id", data.id).in("status", ["prijato", "na_ceste"]).limit(1);
-    if (active?.length) throw new Error("Řemeslník má aktivní zakázku");
-  }
-  const { error } = await db.from("craftsman_applications").update({ approved: data.approved, available: data.approved && data.available }).eq("id", data.id);
+  const { error } = await db.rpc("set_craftsman_state", { p_id: data.id, p_approved: data.approved, p_available: data.available });
   if (error) throw new Error("Uložení řemeslníka selhalo");
   return { ok: true };
 });
@@ -89,5 +86,5 @@ export const publicReviews = createServerFn({ method: "GET" }).handler(async () 
   const { data: rows } = await db.from("ratings").select("stars,comment,author_name,created_at").eq("direction", "customer_to_craftsman").eq("public_ok", true).not("comment", "is", null).order("created_at", { ascending: false }).limit(6);
   const { data: all } = await db.from("ratings").select("stars").eq("direction", "customer_to_craftsman");
   const count = all?.length ?? 0;
-  return { reviews: rows ?? [], count, average: count ? Math.round((all!.reduce((s, r) => s + r.stars, 0) / count) * 10) / 10 : null };
+  return { reviews: rows ?? [], count, average: count ? Math.round(((all ?? []).reduce((s, r) => s + r.stars, 0) / count) * 10) / 10 : null };
 });

@@ -1,14 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { Radio, RefreshCw, Siren, Sparkles } from "lucide-react";
-import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, markCallback, STATUSES } from "@/lib/api.functions";
+import { listDashboard, updateRequest, getAvailability, setAvailability, classifyIssue, markContact, STATUSES } from "@/lib/api.functions";
 import { STATUS_LABEL, TRADE_INFO, formatPreferredTime, type Trade } from "@/lib/content";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { setCraftsman } from "@/lib/workflow.functions";
+import { DispatchOrderControls } from "@/components/DispatchOrderControls";
+import { REGIONS } from "@/lib/regions";
+import { canChangeStatus } from "@/lib/communication";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dispecink")({
@@ -34,16 +37,19 @@ function Dashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [tab, setTab] = useState<"req" | "crafts">("req");
 
+  const [filters, setFilters] = useState({ search: "", status: "", trade: "", region: "", urgency: "" });
+  const lastIds = useRef<Set<string> | null>(null);
   const [avail, setAvail] = useState({ count: "0", eta: "90" });
   const load = useCallback(async (p: string) => {
     try {
-      getAvailability().then((a) => setAvail({ count: String(a.available_count), eta: String(a.eta_minutes) }));
+
       const d = await listDashboard({ data: { pin: p } });
+      if (lastIds.current && d.requests.some(r => !lastIds.current?.has(r.id))) toast.info("Nová objednávka na dispečinku");
+      lastIds.current = new Set(d.requests.map(r => r.id));
       setData(d);
       sessionStorage.setItem("dpin", p);
     } catch {
-      toast.error("Neplatný PIN");
-      setData(null);
+      toast.error("Přehled se nepodařilo načíst. Zkontrolujte PIN nebo zkuste obnovit.");
     }
   }, []);
 
@@ -52,11 +58,18 @@ function Dashboard() {
     if (p) { setPin(p); load(p); }
   }, [load]);
 
+  useEffect(() => {
+    if (!data || !pin) return;
+    const timer = setInterval(() => { if (document.visibilityState === "visible") load(pin); }, 30000);
+    return () => clearInterval(timer);
+  }, [!!data, pin, load]);
+  useEffect(() => { getAvailability().then(a => setAvail({ count: String(a.available_count), eta: String(a.eta_minutes) })).catch(() => {}); }, []);
+
   async function act(id: string, patch: { status?: Status; broadcast?: boolean }) {
     try {
       const result = await updateRequest({ data: { pin, id, ...patch } });
       if (patch.broadcast && "count" in result && result.count === 0) toast.info("Žádný vhodný volný řemeslník v kraji.");
-      if (patch.broadcast) toast.success("Nabídky vytvořeny pro dostupné ověřené řemeslníky v kraji.");
+      if (patch.broadcast && "count" in result && result.count > 0) toast.success("Nabídky vytvořeny pro dostupné ověřené řemeslníky v kraji.");
       load(pin);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
   }
@@ -91,8 +104,14 @@ function Dashboard() {
       </div>
     );
 
-  const counts = Object.fromEntries(STATUSES.map((s) => [s, data.requests.filter((r) => r.status === s).length]));
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, data.requests.filter((r) => !r.cancelled_at && r.status === s).length]));
 
+  const filtered = data.requests.filter(r =>
+    (!filters.status || (filters.status === "zruseno" ? !!r.cancelled_at : !r.cancelled_at && r.status === filters.status)) &&
+    (!filters.trade || r.trade === filters.trade) && (!filters.region || r.region === filters.region) && (!filters.urgency || r.urgency === filters.urgency) &&
+    `${r.address} ${r.city} ${r.email} ${r.customer_name}`.toLocaleLowerCase("cs").includes(filters.search.toLocaleLowerCase("cs")));
+  const today = new Date().toLocaleDateString("cs-CZ", { timeZone: "Europe/Prague" });
+  const todayOrders = data.requests.filter(r => new Date(r.created_at).toLocaleDateString("cs-CZ", { timeZone: "Europe/Prague" }) === today);
   return (
     <div className="min-h-screen bg-muted">
       <SiteHeader />
@@ -108,12 +127,12 @@ function Dashboard() {
 
         {data.callbacks.length > 0 && (
           <div className="mt-6 rounded-xl border-2 border-primary bg-card p-4">
-            <div className="font-bold">Zavolat zpět ({data.callbacks.length})</div>
+            <div className="font-bold">Dotazy e-mailem ({data.callbacks.length})</div>
             <ul className="mt-2 space-y-2">
               {data.callbacks.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span><a href={`tel:${c.phone}`} className="font-bold text-primary">{c.phone}</a> · {c.trade} · {new Date(c.created_at).toLocaleString("cs-CZ")}</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await markCallback({ data: { pin, id: c.id } }); load(pin); }}>Vyřízeno</Button>
+                  <span><a href={`mailto:${c.email}`} className="font-bold text-primary">{c.email}</a> · {c.trade} · {new Date(c.created_at).toLocaleString("cs-CZ")}</span><p className="w-full whitespace-pre-wrap break-words">{c.message}</p>
+                  <Button size="sm" variant="outline" onClick={async () => { await markContact({ data: { pin, id: c.id } }); load(pin); }}>Vyřízeno</Button>
                 </li>
               ))}
             </ul>
@@ -146,7 +165,7 @@ function Dashboard() {
           </div>
         </form>
 
-        <p className="mt-4 text-sm text-muted-foreground">Nabídky jsou v soukromém přehledu řemeslníka. Automatické SMS nejsou připojené.</p>
+        <section className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4" aria-label="Dnešní přehled">{[["Nové dnes", todayOrders.filter(r => !r.cancelled_at && ["nova","oslovovani"].includes(r.status)).length], ["Přijaté dnes", todayOrders.filter(r => !r.cancelled_at && ["prijato","na_ceste"].includes(r.status)).length], ["Dokončeno dnes", data.requests.filter(r => r.status === "dokonceno" && new Date(r.updated_at).toLocaleDateString("cs-CZ", { timeZone: "Europe/Prague" }) === today).length], ["Průměrné hodnocení", data.average ?? "—"]].map(([label,value]) => <div key={label} className="border-b border-border pb-3"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold">{value}</p></div>)}</section>
         {tab === "req" ? (
           <>
             <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -157,9 +176,16 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <Input aria-label="Vyhledat objednávku" placeholder="Adresa, e-mail, jméno…" value={filters.search} onChange={e => setFilters(p => ({ ...p, search: e.target.value }))} />
+              <select aria-label="Stav zakázky" className="rounded-md border border-input bg-background p-2" value={filters.status} onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}><option value="">Všechny stavy</option>{STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}<option value="zruseno">Zrušeno</option></select>
+              <select aria-label="Obor zakázky" className="rounded-md border border-input bg-background p-2" value={filters.trade} onChange={e => setFilters(p => ({ ...p, trade: e.target.value }))}><option value="">Všechny obory</option>{Object.entries(TRADE_INFO).map(([t,i]) => <option key={t} value={t}>{i.name}</option>)}</select>
+              <select aria-label="Kraj zakázky" className="rounded-md border border-input bg-background p-2" value={filters.region} onChange={e => setFilters(p => ({ ...p, region: e.target.value }))}><option value="">Všechny kraje</option>{REGIONS.map(r => <option key={r}>{r}</option>)}</select>
+              <select aria-label="Naléhavost zakázky" className="rounded-md border border-input bg-background p-2" value={filters.urgency} onChange={e => setFilters(p => ({ ...p, urgency: e.target.value }))}><option value="">Každá naléhavost</option><option value="havarie">Havárie</option><option value="dnes">Dnes</option><option value="planovano">Plánovaný termín</option></select>
+            </div>
             <div className="mt-6 space-y-3">
-              {data.requests.length === 0 && <p className="text-muted-foreground">Zatím žádné poptávky.</p>}
-              {data.requests.map((r) => (
+              {filtered.length === 0 && <p className="text-muted-foreground">Žádné odpovídající poptávky.</p>}
+              {filtered.map((r) => (
                 <div key={r.id} className={cn("rounded-xl border bg-card p-5", r.urgency === "havarie" && r.status !== "dokonceno" ? "border-destructive" : "border-border")}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex min-w-0 gap-4">
@@ -178,20 +204,21 @@ function Dashboard() {
                         {r.ai_reason && <p className="mt-2 text-sm"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />{r.ai_reason}</p>}
                         {r.automation_note && <p className="mt-2 text-sm font-semibold text-destructive">{r.automation_note}</p>}
                         <Link to="/objednavka" search={{ token: r.tracking_token }} className="mt-2 block text-sm font-semibold text-primary underline underline-offset-4">Sledování pro zákazníka</Link>
-                        <a href={`tel:${r.phone}`} className="mt-1 inline-block text-sm font-semibold text-primary underline underline-offset-4">{r.customer_name ? `${r.customer_name} · ` : ""}{r.phone}</a>
+                        <a href={`mailto:${r.email ?? ""}`} className="mt-1 inline-block text-sm font-semibold text-primary underline underline-offset-4">{r.customer_name ? `${r.customer_name} · ` : ""}{r.email ?? "E-mail neuveden"}</a>
                       </div>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-                      <Button size="sm" variant="outline" onClick={() => act(r.id, { broadcast: true })} disabled={r.status !== "nova" && r.status !== "oslovovani"}>
+                      <Button size="sm" variant="outline" onClick={() => act(r.id, { broadcast: true })} disabled={!!r.cancelled_at || (r.status !== "nova" && r.status !== "oslovovani")}>
                         <Radio className="mr-1 h-4 w-4" /> Vytvořit nabídky
                       </Button>
                     </div>
                   </div>
+                  {r.cancelled_at && <p className="mt-4 font-semibold text-destructive">Zrušeno</p>}
                   <div className="mt-4 flex flex-wrap gap-1">
                     {STATUSES.map((s, i) => {
                       const cur = STATUSES.indexOf(r.status as Status);
                       return (
-                        <Button variant="ghost" size="sm" key={s} onClick={() => act(r.id, { status: s })}
+                        <Button variant="ghost" size="sm" key={s} disabled={!!r.cancelled_at || !canChangeStatus(r.status, s)} onClick={() => act(r.id, { status: s })}
                           className={cn("rounded-full px-3 py-1 text-xs font-semibold transition",
                             i < cur ? "bg-secondary text-secondary-foreground" : i === cur ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent")}>
                           {STATUS_LABEL[s]}
@@ -199,6 +226,7 @@ function Dashboard() {
                       );
                     })}
                   </div>
+                  <DispatchOrderControls pin={pin} order={r} craftsmen={data.craftsmen} events={data.events} onSaved={() => { load(pin); }} />
                 </div>
               ))}
             </div>
@@ -210,7 +238,7 @@ function Dashboard() {
               <div key={c.id} className="flex flex-wrap justify-between gap-2 p-4">
                 <div><div className="font-bold">{c.name}</div><div className="text-sm text-muted-foreground">{TRADE_INFO[c.trade as Trade]?.name} · {c.area} · {c.region ?? "Kraj neuveden"}</div></div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <a href={`tel:${c.phone}`} className="font-semibold text-primary">{c.phone}</a>
+                  <a href={`mailto:${c.email}`} className="break-all font-semibold text-primary">{c.email}</a>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: e.target.checked, available: c.available } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Ověřený</label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c.available} disabled={!c.approved} onChange={async e => { try { await setCraftsman({ data: { pin, id: c.id, approved: c.approved, available: e.target.checked } }); load(pin); } catch(e) { toast.error(e instanceof Error ? e.message : "Chyba"); } }} />Volný</label>
                   {c.approved && <Link to="/mistr" search={{ token: c.portal_token }} className="text-sm font-semibold text-primary underline underline-offset-4">Soukromý přehled</Link>}

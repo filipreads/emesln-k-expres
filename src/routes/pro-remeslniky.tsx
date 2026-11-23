@@ -34,10 +34,10 @@ function Join() {
     const f = new FormData(e.currentTarget);
     setBusy(true);
     try {
-      await submitApplication({ data: { name: String(f.get("name")), area: String(f.get("area")), phone: String(f.get("phone")), region: String(f.get("region")) as (typeof REGIONS)[number], trade } });
+      await submitApplication({ data: { name: String(f.get("name")), area: String(f.get("area")), email: String(f.get("email")), region: String(f.get("region")) as (typeof REGIONS)[number], trade } });
       setDone(true);
     } catch {
-      toast.error("Zkontrolujte prosím údaje (telefon ve formátu +420 777 123 456).");
+      toast.error("Zkontrolujte prosím údaje a e-mail.");
     } finally { setBusy(false); }
   }
 
@@ -47,7 +47,7 @@ function Join() {
       <main className="mx-auto grid max-w-6xl gap-12 px-4 py-16 md:grid-cols-2">
         <div>
           <h1 className="text-4xl font-black md:text-5xl">Přidejte se do sítě</h1>
-          <p className="mt-4 text-lg text-muted-foreground">Zakázky z vašeho okolí rovnou do telefonu. Vy si vyberete, kterou přijmete.</p>
+          <p className="mt-4 text-lg text-muted-foreground">Zakázky z vašeho okolí v soukromém přehledu. Vy si vyberete, kterou přijmete.</p>
           <ul className="mt-8 space-y-4">
             {["Žádné shánění zákazníků ani reklama", "Zakázky podle vaší lokality a oboru", "Výplata do 3 dnů od dokončení", "Pracujete, kdy chcete"].map((x) => (
               <li key={x} className="flex gap-3"><CheckCircle2 className="h-6 w-6 shrink-0 text-primary" /> {x}</li>
@@ -58,7 +58,7 @@ function Join() {
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
             <h2 className="mt-4 text-2xl font-extrabold">Díky za přihlášku!</h2>
-            <p className="mt-2 text-muted-foreground">Ozveme se vám telefonicky a domluvíme další kroky.</p>
+            <p className="mt-2 text-muted-foreground">Ozveme se vám e-mailem a domluvíme další kroky.</p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border bg-card p-6">
@@ -71,7 +71,7 @@ function Join() {
             </div>
             <div><Label htmlFor="region">Kraj</Label><select id="region" name="region" required className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm">{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
             <div><Label htmlFor="area">Lokalita působení</Label><Input id="area" name="area" required maxLength={200} placeholder="Např. Brno a okolí do 30 km" className="mt-1" /></div>
-            <div><Label htmlFor="phone">Telefon</Label><Input id="phone" name="phone" type="tel" required placeholder="+420 777 123 456" className="mt-1" /></div>
+            <div><Label htmlFor="email">E-mail</Label><Input id="email" name="email" type="email" required placeholder="vas@email.cz" className="mt-1" /></div>
             <Button type="submit" size="lg" disabled={busy} className="w-full font-bold">{busy ? "Odesílám…" : "Odeslat přihlášku"}</Button>
           </form>
         )}

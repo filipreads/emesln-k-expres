@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { RefreshCw, CheckCircle2, Circle, Phone, Bell, CalendarClock } from "lucide-react";
+import { RefreshCw, CheckCircle2, Circle, Mail, Bell, CalendarClock } from "lucide-react";
 import { RatingForm } from "@/components/RatingForm";
 import { trackOrder, rateCraftsman } from "@/lib/workflow.functions";
 import { STATUS_LABEL, STATUS_STORY, TRADE_INFO, urgencyLabel, formatPreferredTime, shouldShowArrivalCountdown, type Trade } from "@/lib/content";
@@ -49,7 +49,7 @@ function Tracking() {
   const load = useCallback(async () => {
     if (!valid) { setError("Otevřete soukromý odkaz z potvrzení objednávky."); return; }
     try {
-      const r = await trackOrder({ data: { token: token! } });
+      const r = await trackOrder({ data: { token: token ?? "" } });
       if (lastStatus.current && lastStatus.current !== r.status) chime();
       lastStatus.current = r.status;
       setData(r); setError("");
@@ -57,7 +57,7 @@ function Tracking() {
   }, [token, valid]);
 
   useEffect(() => { setRecent(readOrders()); }, []);
-  useEffect(() => { if (valid && data) rememberOrder({ token: token!, id: "", trade: data.trade, at: data.updated_at, ...readOrders().find((o) => o.token === token) }); }, [valid, token, data]);
+  useEffect(() => { if (valid && data) rememberOrder({ token: token ?? "", id: "", trade: data.trade, at: data.updated_at, ...readOrders().find((o) => o.token === token) }); }, [valid, token, data]);
 
   useEffect(() => {
     load();
@@ -72,7 +72,7 @@ function Tracking() {
 
   const steps = Object.entries(STATUS_LABEL) as [keyof typeof STATUS_LABEL, string][];
   const cur = data ? steps.findIndex(([k]) => k === data.status) : -1;
-  const story = data?.urgency === "planovano" && data.status === "prijato"
+  const story = data?.cancelled_at ? "Objednávka byla zrušena." : data?.urgency === "planovano" && data.status === "prijato"
     ? "Mistr zakázku přijal. Požadovaný termín vám potvrdí dispečink."
     : data ? STATUS_STORY[data.status] : "";
 
@@ -91,23 +91,23 @@ function Tracking() {
 
     {data && <>
       <div className="mt-8 flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-primary">{TRADE_INFO[data.trade as Trade]?.name ?? data.trade}</span><Badge variant={data.urgency === "havarie" ? "destructive" : "secondary"}>{urgencyLabel(data.urgency)}</Badge></div>
-      <h2 className="mt-2 text-2xl font-bold" aria-live="polite">{STATUS_LABEL[data.status]}</h2>
+      <h2 className="mt-2 text-2xl font-bold" aria-live="polite">{data.cancelled_at ? "Zrušeno" : STATUS_LABEL[data.status]}</h2>
       <p className="mt-3 text-lg">{story}</p>
       {data.craftsman && <p className="mt-2 text-muted-foreground">Váš mistr: <span className="font-semibold text-foreground">{data.craftsman}</span></p>}
       {data.urgency === "planovano" && data.status !== "dokonceno" && <p className="mt-3 flex items-start gap-2 font-semibold"><CalendarClock className="h-5 w-5 shrink-0 text-primary" /><span>Požadovaný termín: {data.preferred_time ? <time dateTime={data.preferred_time}>{formatPreferredTime(data.preferred_time)}</time> : "Neuveden – ověřte s dispečinkem"}</span></p>}
-      {shouldShowArrivalCountdown(data) && data.arrival_minutes !== null && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
-      {data.craftsman_phone && <Button asChild size="lg" className="mt-5 w-full sm:w-auto"><a href={`tel:${data.craftsman_phone.replace(/\s/g, "")}`}><Phone className="h-5 w-5" />Zavolat mistrovi</a></Button>}
+      {!data.cancelled_at && shouldShowArrivalCountdown(data) && data.arrival_minutes !== null && <Countdown from={data.updated_at} minutes={data.arrival_minutes} />}
+      {data.craftsman_email && <Button asChild size="lg" className="mt-5 w-full sm:w-auto"><a href={`mailto:${data.craftsman_email}`}><Mail className="h-5 w-5" />Napsat mistrovi</a></Button>}
       {data.status === "dokonceno" && <CheckCircle2 className="mt-4 h-10 w-10 text-success" />}
 
-      <ol className="mt-8 rounded-xl border border-border bg-card p-4">{steps.map(([s, l], i) => <li key={s} className="relative flex gap-3 pb-4 last:pb-0">
+      <ol hidden={!!data.cancelled_at} className="mt-8 rounded-xl border border-border bg-card p-4">{steps.map(([s, l], i) => <li key={s} className="relative flex gap-3 pb-4 last:pb-0">
         {i < steps.length - 1 && <span aria-hidden className={cn("absolute left-3 top-7 bottom-0 w-px", i < cur ? "bg-primary" : "bg-border")} />}
         <span className={cn("relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full", i === cur ? "bg-primary text-primary-foreground" : i < cur ? "text-primary" : "text-muted-foreground")}>{i < cur ? <CheckCircle2 className="h-6 w-6" /> : <Circle className={cn("h-4 w-4", i === cur && "animate-pulse fill-current")} />}</span>
         <div className={cn(i === cur ? "font-bold" : i < cur ? "text-foreground" : "text-muted-foreground")}>{l}{i === cur && <p className="text-sm font-normal text-muted-foreground">{story}</p>}</div>
       </li>)}</ol>
 
-      {data.status !== "dokonceno" && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Bell className="h-4 w-4" />Stránka se aktualizuje sama a při změně krátce zazvoní.</p>}
+      {!data.cancelled_at && data.status !== "dokonceno" && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Bell className="h-4 w-4" />Stránka se aktualizuje sama a při změně krátce zazvoní.</p>}
 
-      {data.status === "dokonceno" && <div className="mt-8">{data.rated ? <p className="rounded-xl border border-border bg-card p-5 font-semibold">Děkujeme, vaše hodnocení jsme dostali.</p> : <RatingForm title={`Jak jste byli spokojeni${data.craftsman ? ` s mistrem ${data.craftsman}` : ""}?`} allowPublic onSubmit={async v => { await rateCraftsman({ data: { token: token!, ...v } }); await load(); }} />}</div>}
+      {data.status === "dokonceno" && <div className="mt-8">{data.rated ? <p className="rounded-xl border border-border bg-card p-5 font-semibold">Děkujeme, vaše hodnocení jsme dostali.</p> : <RatingForm title={`Jak jste byli spokojeni${data.craftsman ? ` s mistrem ${data.craftsman}` : ""}?`} allowPublic onSubmit={async v => { await rateCraftsman({ data: { token: token ?? "", ...v } }); await load(); }} />}</div>}
       <p className="mt-6 text-xs text-muted-foreground">Poslední změna: {new Date(data.updated_at).toLocaleString("cs-CZ")}</p>
     </>}
   </main><SiteFooter /></div>;
